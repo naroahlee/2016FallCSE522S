@@ -1,0 +1,166 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0071)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/05_modules.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 5<br></h2>
+<h2 style="text-align: center;">Loadable Kernel Modules</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<i>
+<p>There was a big book with plain red leather covers; its tall pages were now almost filled. At the beginning there were many leaves covered with Bilbo's thin wandering hand; but most of it was written in Frodo's firm flowing script. It was divided into chapters but Chapter 80 was unfinished, and after that were some blank leaves.</p>
+
+<p>"Why, you have nearly finished it, Mr. Frodo!" Sam exclaimed. "Well, you have kept at it, I must say."</p>
+
+<p>"I have quite finished, Sam," said Frodo. "The last pages are for you."</p>
+</i>
+<p style="text-indent:10%">—<i>The Return of the King</i>, Book VI, Chapter 9</p><p>
+
+</p><p>Explanation of studio</p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Build and install a kernel module
+  </li><li>Write your own kernel module
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Loadable Kernel Modules
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>Create a new directory (outside of the Linux source tree) to hold your
+kernel modules. Use pages 338 and 339 of <i>Linux Kernel Development</i> to 
+write a simple "Hello, World!" module. Then create a Makefile that contains the
+line "<code>obj-m := hello.o</code>". Finally, build the module with
+the command 
+"<code>make -C /linux/source/directory/ SUBDIRS=$PWD modules</code>", 
+but replace the path with the root location of your Linux source tree.<p></p>
+
+<p>What do you expect to happen when you load the kernel module?</p>
+
+<p></p></li><li>Before loading your first module, you might want to clear the contents
+of the system log. The same command (<code>dmesg</code>) that allows you to
+view the system log also allows you to manipulate it. You can clear the log
+with the command "<code>sudo dmesg --clear</code>".<p></p>
+
+<p>The basic utility for loading modules into the kernel is called
+<code>insmod</code>. The make process from before will have generated a
+<code>.ko</code> file, which is the loadable module. Load your module now
+with a command such as: "<code>sudo insmod hello.ko</code>"</p>
+
+<p><i><b>NOTE:</b> The <code>insmod</code> utility has been superceeded
+by another program called <code>modprobe</code>, which in general should
+be used. <code>modprobe</code> is safer to use because it
+performs dependency resolution between modules. We use 
+<code>insmod</code> and <code>rmmod</code> here simply to
+demonstrate the low-level tools that actually perform
+module loading and unloading.</i>
+
+</p><p></p></li><li>If you recieve no error messages, then your module has been
+successfully loaded. However, there are two ways to verify this. First,
+use the <code>lsmod</code> command to see a listing of all currently loaded
+kernel modules. Verify that your module appears in the list. Second, verify
+that the printk statement in your init function has shown up in the
+system log. For the answer to this exercise, copy
+the output of <code>lsmod</code> and the last few lines of the system
+log here.<p></p>
+
+<p></p></li><li>The basic utility for removing modules from the kernel is called
+<code>rmmod</code>. When using this tool you can specify the module name
+(as shown in <code>lsmod</code>) or you can specify a <code>.ko</code> file.<p></p>
+
+<p>Remove your module now, and verify its removal as before. As the answer to
+this exercise, copy the output of <code>lsmod</code> and the last few lines
+of the system log.</p>
+
+<p></p></li><li>The major reason for kernel modules (as opposed to running a userspace
+program with root permissions) is that module code has direct access to all of
+the kernel's resources. Userspace programs, in contrast, must use the OS'es
+interface (system calls) to access such resources, and even then, most of the
+kernel is opaque to user processes.<p></p>
+
+<p>One kernel variable we've talked about previous is the <code>jiffies</code>
+counter. Recall that this variable keeps track of how many timer interrupts
+have (theoretically) occured since system boot. Modify your kernel module
+to print the value of this variable, it's an unsigned long. This value
+is not directly accessible by userspace programs, but it is visible in
+kernelspace.</p>
+
+<p>Copy and paste a system log message that prints the <code>jiffies</code>
+variable.</p>
+
+
+<p></p></li><li>Module init and exit functions are supposed to use the "0/-E" return
+convention. This means that these functions should return a 0 on success, or
+in the event of a failure they return the negative value of one of the error
+codes found in <code>/include/uapi/asm-gerneic/errno-base.h</code>. Modify
+your init function to return positive and negative values, respectively.
+What happens when you load the module? Check the system logs, what do you
+find there?<p></p>
+
+<!--
+<p><li>cat /proc/kallsyms, ksymtab</p>
+
+<p><li>Create symbol</p>
+<p><li>Find in kallsyms</p>
+<p><li>Create thread?</p>
+<p><li></p>
+<p><li></p>
+-->
+
+<p></p><h2>Things to turn in</h2><p></p>
+<p>In addition to the answers above, please submit:</p>
+<ul>
+<li>The kernel module(s) you created
+</li></ul>
+
+
+<hr>
+
+</li></ol>
+
+<p></p><h3>Optional Enrichment Exercises</h3><p></p>
+<ol>
+<p></p><li>Kernel symbols that are available to be used in loadable modules
+are called <i>exported symbols</i> and are identified by the
+<code>EXPORT_SYMBOL</code> macro. You can see a list of all kernel symbols
+by looking at the file /proc/kallsyms, e.g. <code>cat /proc/kallsyms</code>.
+You might notice that this is very similar to the symbol table of a traditional
+application. (Which you can print with the program <code>nm</code>, if you've
+never done it before. Try it on any binary!) In fact, their syntax is identical, so you can use
+<code>man nm</code> to find some more information about how to decode the
+contents of <code>/proc/kallsyms</code>.<p></p>
+
+<p>Symbols that have been exported can be found in this list with the prefixes
+<code>__kstrtab_</code>, and <code>__ksymtab_</code>. These prefixes denote
+a special kernel symbol that stores the name of the exported symbol and a
+struct that stores information about the symbol, respectively. See the
+definition of <code>EXPORT_SYMBOL</code> to see how these are generated.</p>
+
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p></body></html>

@@ -1,0 +1,11 @@
+--- syscalls.h	2016-09-01 13:47:24.913801492 -0500
++++ syscalls.h.bak	2016-09-01 13:40:03.356242036 -0500
+@@ -889,8 +889,4 @@ asmlinkage long sys_membarrier(int cmd,
+ 
+ asmlinkage long sys_mlock2(unsigned long start, size_t len, int flags);
+ 
+-/* Naroah160901 Studio02 */
+-asmlinkage long sys_badcall(void);
+-asmlinkage long sys_naroahkmsg(int s32num);
+-
+ #endif

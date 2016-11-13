@@ -1,0 +1,157 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0086)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/03_userspace_benchmarking.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 3<br></h2>
+<h2 style="text-align: center;">Userspace Benchmarking</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<p><i>
+"I wish it need not have happened in my time," said Frodo.
+<br>
+"So do I," said Gandalf, "and so do all who live to see such times. But that 
+is not for them to decide. All we have to decide is what to do with the time 
+that is given, us."
+</i></p>
+<p style="text-indent:10%">—<i>The Fellowship of the Ring</i>
+, Book 1, Chapter 2</p><p>
+
+</p><p>Benchmarking programs is a common task that drives decisions about where
+and how to invest the effort of software developers. This task can be
+very simple to very complex, depending on desired accuracy and the kind
+of code being profiled. In an OS, code that is run very infrequently or
+at a low priority doesn't need to be validated to as high a standard as code
+that runs very frequently (such as the system timer interrupt handler) or
+at high priority (such as real-time priority). Benchmarking in userspace
+serves as an introduction to the concepts behind benchmarking in the kernel, 
+and it allows us to measure the impact of the kernel on userspace performance.
+</p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Benchmark programs using coarse command line tools
+  </li><li>Benchmark programs using Linux's clock functions
+  <!--<li>Benchmark programs using the ARM processor's cycle counter-->
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Userspace Benchmarking
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>First, we need some programs to benchmark. I've put together a code
+package that includes four programs for us to use. Download it
+<a href="http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/test_programs.tgz">here</a>. Unzip the package, build the programs
+with the provided makefile, and run each one a few times. As the answer to this
+exercise, list what each program does.<p></p>
+
+<p></p></li><li>We can do some very coarse grained benchmarking straight from
+the command line, using a bash command named <code>time</code>. This is
+actually a special command built into the bash shell, so its documentation
+can be found under <code>man bash</code>. As the answer to this exercise,
+use this command to make a few timings of the test programs and copy the
+results here.<p></p>
+
+<p></p></li><li>The <code>time</code> command outputs three different timings. List them
+here and explain the difference.<p></p>
+
+<p></p></li><li>Compare the results of the following two commands. What do you observe
+about the relationship between the <code>user</code> and <code>real</code>
+timings? Explain your observations.<p></p>
+<ul>
+<li><code>time ./dense_mm 400</code>
+</li><li><code>time ./parallel_dense_mm 400</code>
+</li></ul>
+
+<p></p></li><li>Execute the following command. What do you observe about the
+relationship between the <code>user</code> and <code>sys</code> timings?
+Look at the code in <code>sing.c</code> and explain your observations.<p></p>
+<ul>
+<li><code>time ./sing 1000</code>
+</li></ul>
+
+
+<p></p></li><li>Now we're going to switch to using the C API for Linux's clocks. First,
+we'll look at exactly what clocks are available and get some info about each
+with the function <code>clock_getres</code>. You can access the documentation
+for this function in the manual pages: <code>man clock_getres</code>.
+<span style="color:red"><b><i>Warning:</i></b></span> <i>Internet versions of
+man pages are often not up to date. Use the version on your machine.</i><p></p>
+
+<p>Look through the clocks available at the <code>clock_getres</code> man page.
+For this exercise, give two clock names. For the first, give a clock that would
+ be well suited for userspace benchmarking, and explain why. For the second,
+give a clock that would be poorly suited for userspace benchmarking, and
+explain why.</p> 
+
+<p></p></li><li>Next, use <code>clock_getres</code> to write a short program called
+<code>getres.c</code>that gives
+the resolutions for several different clock types. This function requires
+using a structure called a <code>timespec</code> which is also documented at 
+the same man page, and is the basic data structure used to report timing 
+information from the kernel to userspace.<p></p>
+
+<p>As the answer to this exercise, copy and paste your program output.
+Include at least one <code>_COARSE</code> clock type.</p>
+
+<p></p></li><li>Explain what is meant by the resolution values returned from your
+program.<p></p>
+
+<p></p></li><li>Given what you know about Linux timers, the HZ variable, and jiffies
+from chapter 11 in our book, speculate about the difference between
+<code>CLOCK_MONOTONIC</code> and <code>CLOCK_MONOTONIC_COARSE</code>.<p></p>
+
+<p></p></li><li>Write a second short program that uses the function
+<code>clock_gettime</code> to figure out how long a call to
+<code>clock_gettime</code> takes. As the answer to this exercise,
+report this value.<p></p>
+
+<p></p></li><li> Make a copy of <code>parallel_dense_mm.c</code>. First modify it so 
+that you time the critical computational loop with the clock 
+<code>CLOCK_MONOTONIC_RAW</code>. Then modify it again so that the program
+takes a second parameter and executes the timed segment multiple times. Your
+program should output the minimum, average, and maximum timings over all
+timed iterations.<p></p>
+
+<p>Leave the answer to this exercise blank</p>
+
+<p></p></li><li>Run your program for 100 iterations with matrix size 100. What are the
+reported values? Speculate about the total distribution of values- based on
+the minimum, avgerage, and maximum timings, what do you think a common running
+time actually is? Give an explanation for the distribution of values.<p></p>
+
+</li></ol>
+
+<p></p><h2>Things to turn in</h2><p></p>
+<p>In addition to the answers above, please submit:</p>
+<ul>
+<li>getres.c
+</li><li>Your copy of parallel_dense_mm.c
+</li></ul>
+
+
+<hr>
+</body></html>

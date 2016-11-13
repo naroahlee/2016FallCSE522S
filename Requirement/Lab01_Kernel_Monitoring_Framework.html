@@ -1,0 +1,297 @@
+
+<!-- saved from url=(0081)http://www.cse.wustl.edu/~cdgill/courses/cse522/labs/01_monitoring_framework.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Lab 1<br></h2>
+<h2 style="text-align: center;">Kernel Monitoring Framework</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<i><p>
+He then told them many remarkable stories, sometimes half as if speaking to himself, sometimes looking at them suddenly with a bright blue eye under his deep brows. Often his voice would turn to song, and he would get out of his chair and dance about. He told them tales of bees and flowers, the ways of trees, and the strange creatures of the Forest, about the evil things and good things, things friendly and things unfriendly, cruel things and kind things, and secrets hidden under brambles.</p>
+<p>
+As they listened, they began to understand the lives of the Forest, apart from themselves, indeed to feel themselves as the strangers where all other things were at home.
+</p></i>
+<p style="text-indent:10%">—<i>The Fellowship of the Ring</i>, Book I, Chapter 7</p><p>
+
+</p><p>An important aspect of system development is to verify the correct operation
+of the system. Real-world systems usually must conform to some performance
+requirement beyond simply being free of bugs or producing the correct
+output. For example, for high-performance systems it might be important to
+know computational throughput, for interactive systems it might be important
+to provide quick response to a user, and safety-critical systems might need
+to make some guarantee about their ability to handle problematic events within
+a bounded timeframe. 
+In such situations, the system must be able to monitor itself and take
+actions as necessary to ensure the correct operation of the system. In this
+assignment we will explore one such way to perform this monitoring task.</p>
+
+<p>In this lab, you will:</p>
+
+<ol>
+  <li>Use kernel threads to perform deferrable work inside the kernel.
+  </li><li>Use kernel timers to schedule events (thread wakeups) in the future.
+  </li><li>Create a monitoring framework that periodically captures information
+from kernelspace.
+  </li><li>Verify and evaluate the operation of your monitoring framework through
+tracing.
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Monitoring Framework
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this lab.<p></p>
+
+<p></p></li><li>To get started, create a kernel module that creates a kernel thread
+on load. The
+kernel thread interface is found in <code>include/linux/kthread.h</code>, and
+is very similar to the POSIX threading interface. You must specify a function
+that is executed by the thread when it is created, may optionally specify a
+pointer to a data struct, and should specify thread name. This thread name
+is the human-readable identifier (e.g. that shows up in <code>ps</code> or
+<code>top</code>).<p></p>
+
+<p>Have your kernel thread print a system message so that you know it ran. It
+will automatically destroy itself once it returns from the specified
+function.</p>
+
+<p></p></li><li>Typically a kernel thread will not simply execute a function and return.
+Instead, we want it to stay alive and periodically perform work. In particular,
+modify your code so that the thread is created when the module is loaded and 
+destroyed when the module is unloaded, but loops otherwise. The functions
+<code>kthread_should_stop()</code> and <code>kthread_stop()</code> will be
+very useful here.<p></p>
+
+<p>However, your thread should not occupy the processor indefinitely.
+Kernel code may call the function <code>schedule()</code>, which
+invokes the system scheduler and effectively yields the processor to any other
+processes that might be waiting to run. When your kernel thread is eventually
+re-scheduled, it will resume executing after the call to
+<code>schedule()</code>.</p>
+
+<p>Have your thread print a message every time it is activated by the system
+scheduler. Copy and paste the tail of the system log. Is there any issue
+with the way your thread is running?</p>
+
+<p></p></li><li>Unfortunately, calling <code>schedule()</code> merely allows other
+processes to run, it doesn't cause our thread to run sensibly. If the thread
+loops through a call to <code>schedule()</code>, it will run constantly.
+Instead, we want some way to allow our thread to sleep while it is not needed,
+and then wake up and perform work when it is needed.<p></p>
+
+<p>Putting a thread to sleep in the kernel is somewhat different from
+user-space. Really, what we want to do is prevent the scheduler from selecting
+our thread to run. We can do so by changing the <i>state</i> of the thread
+from <code>TASK_RUNNING</code> to <code>TASK_INTERRUPTIBLE</code>. You can
+do this by calling <code>set_current_state(TASK_INTERRUPTIBLE)</code> from the
+thread function. This will remove the current task (i.e. our kernel thread)
+from the scheduler runqueue. The thread will continue executing after the
+call to this function, but once it is scheduled off of the processor, it will
+not be re-scheduled until its state is changed back to 
+<code>TASK_RUNNING</code>.</p>
+
+<p>Have your thread change its state to TASK_INTERRUPTIBLE and verify that it
+sleeps.</p>
+
+<p></p></li><li>Now that your kernel thread sleeps, we need a way to wake it back
+up and perform its work at the appropriate time. The kernel provides a variety
+of mechanisms to defer work until <i>some later time</i>, but in order to
+defer work until <i>a specific time</i> there is just one tool: timers.
+Before your thread goes to sleep, use the <code>hrtimers</code> framework to
+schedule a wakeup call for itself one second into the future.<p></p>
+
+<p>You can read about <a href="https://lwn.net/Articles/167897/">
+the <code>hrtimers</code> API here</a> (however, the function signatures
+there are slightly out of date, so be sure to cross reference these with
+your actual kernel). You can wake up a kthread using the function
+<code>wake_up_process()</code>.</p>
+
+<p></p></li><li>Monitor and verify the timing of your thread with the system log.
+Normally we have accessed the system log through the command
+<code>dmesg</code>. However, the system log is also accessible through
+the file <code>/var/log/syslog</code>. This makes it possible to view
+real-time updates to the system log with the command
+"<code>tail -f /var/log/syslog</code>".<p></p>
+
+<p>Hypothetically your thread should wake up and execute every second. However,
+fluctuations in the actual timing of execution are called <i>variations</i>.
+The <code>dmesg</code> command gives timestamps with six significant digits
+(i.e. microseconds resolution). Use this to estimate the timing variation
+of your kernel thread.</p>
+
+<p></p></li><li>If our purpose is to create a monitoring facility, we should probably
+try to monitor something. Since we're running in process context we are
+effectively unrestricted, and could do any amount of work here that we desire
+(for example, we could examine many kernel data structures and report
+complex or compute-intensive heuristics). For now, however, we will only print
+out some data that is readily accessible to us. In your thread loop, print out
+the values of <code>current-&gt;nvcsw</code> and 
+<code>current-&gt;nivcsw</code>. <p></p>
+
+<p>To explain, the 
+<code>current</code> variable is a macro to the <code>task_struct</code> of the
+currently executing process. If we were executing inside a system call, this
+would point to the task that initiated the system call. However, since we're
+executing in a kernel thread, and kernel threads are effectively treated like
+any other process in the system, this points to the <code>task_struct</code>
+that describes the kernel thread we have made. The data fields
+<code>nvcsw</code> and <code>nivcsw</code> stand for <i>Number of Voluntary
+Context SWitches</i> and <i>Number of InVoluntary Context SWitches</i>,
+respectively, and record the occurences of these two events.</p>
+
+<p></p></li><li>What do you think is meant by a voluntary preemption
+versus an involuntary preemption?<p></p>
+
+<p></p></li><li>Now, modify your framework to accept two module parameters, called
+<code>log_sec</code> and <code>log_nsec</code> that modify how frequently
+your threads will execute (see chapter 17 of our text for a refresher
+on kernel module parameters). Provide reasonable default values in the
+event that your module is loaded without arguments.<p></p>
+
+<p></p></li><li>At this point, we have a functional,
+single-threaded monitoring framework. However,
+some operations can only be done efficiently on a per-CPU basis. 
+(E.g. accesing per-CPU data structures.) If you
+look at other kernel threads, you will notice that many of them end with
+a "/0" or similar. This denotes that this kernel thread is pinned to and
+only runs on that core. For example, the thread <code>[ksoftirq/2]</code>
+only executes on core 2, while <code>[migrate/1]</code> only runs on 
+core 1.<p></p>
+
+<p>Make a copy of your existing module and modify it so that you create
+four kernel threads, one pinned to each core in the system. There exists
+a function in <code>linux/kthread.h</code> that <i>binds</i> kernel threads
+to designated processors, and the header files <code>linux/cpumask.h</code>
+and <code>linux/smp.h</code> provide necessary functions for working with 
+multi-core systems.</p>
+
+<p></p></li><li>Do a cursory verification of your multi-threaded monitoring framework
+with the system log. Each of your four threads should be executing on a
+different processor (you can verify what CPU a kernel thread is currently
+executing on with the function <code>smp_processor_id()</code>) within a
+relatively short time of one another.<p></p>
+
+<p>When you are satisfied that your kernel threads are behaving properly,
+take a system trace with <code>trace-cmd</code>. You can perform system
+tracing in free-running mode by simply omitting a program name. I.e., the
+command <code>trace-cmd record -e sched_switch</code> will trace the
+system until you interrupt it with CTRL-C. Take at least ten seconds of trace.</p>
+
+<p>Graphically verify your system's behavior with Kernelshark. Take a
+screenshot and name it <code>trace.png</code>. You can take a screenshot
+of the whole screen by hitting the <code>Print Screen</code> button on your
+keyboard, or you can install a graphical screenshot utility with
+<code>sudo apt-get install gnome-screenshot</code> (which will then show up
+under <code>Accessories</code> in the system menu).</p>
+
+<p></p></li><li>Zoom in on several of the thread wakeups. Do do your threads run to
+completion every time, or are they ever preempted? Given that the threads
+are executing in kernel mode, what is able to preempt them?<p></p>
+
+<p></p></li><li>Estimate the total execution time of one of your thread wakeups (the 
+time from the
+start of the first thread wakeup to the end of the last thread) in
+Kernelshark's graphical interface. You can do this easily by setting markers
+with left-click and shift plus left-click. Once you have set two markers,
+the time between those two markers will appear in the "Delta" box.
+Measure three groups and report their timings. Take a screenshot of one such
+measurement and name it <code>total_exec.png</code>.<p></p>
+
+<p></p></li><li>Again looking at the groups of thread wakeups, notice that each
+thread does not start at exactly the same time. This variability
+in thread release times is called <i>jitter</i>. Measure the difference
+between the first and the last thread starting times for three wakeups and
+report that value here. Take a screenshot of one such group and
+name it <code>jitter.png</code>.<p></p>
+
+<p></p></li><li>Rather than using the graphical interface, you can also examine
+kernel traces in text format. The command <code>trace-cmd report</code>
+generates this text, and you can search for relevant log entries with
+<code>grep</code>. For example, the command
+<code>trace-cmd report | grep log_thread/3</code> would return all log entries
+related to the process <code>log_thread/3</code>. Use this technique to compute
+the actual running time over five wakeups of a single logging thread, and
+identify the minimum and maximum values.<p></p>
+
+<p></p></li><li>If you wanted to validate your system to a high degree of accuracy,
+you could write a script that parses this log and identifies thread wakeups
+and suspensions automatically. This would allow you to analyze large kernel
+traces automatically. This is not required for this assigment, but give a
+general procedure for computing:<p></p>
+<ul>
+<li> Per-period execution time of a thread (robust against preemptions)
+</li><li> Thread release jitter amongst a team of threads
+</li></ul>
+
+<p></p></li><li>If you are willing, please estimate the amount of time you've spent on
+this assignment. This will allow the instructor to better pace the course
+content in future semesters.<p></p>
+
+</li></ol>
+
+<p></p><h2>Things to turn in</h2><p></p>
+
+<p>In addition to the exercises above, please turn in:</p>
+
+<ul>
+<li> Your single-threaded logging module code
+</li><li> Your multi-threaded logging module code
+</li><li> A makefile for building these modules
+</li><li> trace.png
+</li><li> total_exec.png
+</li><li> jitter.png
+</li></ul>
+
+<hr>
+
+<p></p><h3>Optional Enrichment Exercises</h3><p></p>
+<ol>
+<p></p><li>The way we've done module I/O in this lab (through <code>printk</code>
+and module parameters) is somewhat artificial. We will explore this later in
+the semester, but effective utilities would provide a facility for file-like
+I/O through the <i>Virtual File System</i>. This allows for reading and
+writing to RAM-backed files (i.e. files that never exist on disk anywhere).
+This is the common way to pass data to and from the kernel. For example, the 
+<code>/proc</code> filesystem contains a lot of data about the currently
+running system, and all of these files are virtual files that are maintained
+by the kernel.<p></p>
+
+<p></p></li><li>You can use your module to monitor many conditions in the kernel. An
+easy place to look for is back to the process descriptor 
+(<code>task_struct</code>). Try printing out various data fields to see
+how they change over time. (Note, some fields, such as <code>utime</code>
+and <code>stime</code> are not updated for the <code>current</code> pointer
+since we are executing in kernel thread context. However, you could look up how
+to get a <code>task_struct</code> pointer to a userspace process to see these
+data fields in action.)<p></p>
+
+<p></p></li><li>Try writing a simple script to parse the <code>trace-cmd</code> log
+file. You can pull out a lot of valuable information with simple regular
+expressions.<p></p>
+
+
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p></body></html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0072)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/02_syscalls.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 2<br></h2>
+<h2 style="text-align: center;">Linux System Calls</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<p><i>
+`What does it mean by speak, friend, and enter?' asked Merry.</i></p><i>
+</i><p><i>'That is plain enough,' said Gimli. `If you are a friend, speak the password, and the doors will open, and you can enter.'
+</i></p>
+<p style="text-indent:10%">—<i>The Fellowship of the Ring</i>, Book 2, Chapter 4</p><p>
+
+</p><p>System calls are the fundamental, most stable interface that is provided by
+the operating system. They are how user programs request the vast majority
+of kernel actions: creating, reading, and destroying files; allocating and
+freeing dynamic memory; executing new programs, etc.</p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Make system calls with the libc wrapper
+  </li><li>Make system calls with the native Linux interface
+  </li><li>Write your own system call
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+System Calls Studio
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>First we're going to make a system call through the
+libc wrapper. This is the standard way that user programs make calls
+to the kernel. You can find a complete list of system calls in the manual
+pages with the command <code>man syscalls</code>.<p></p>
+
+<p>Navigate outside of the linux source code directory
+and make a new directory for your userspace programs, and a new file called
+<code>lib_call.c</code>. In Linux, all users have an associated user ID number.
+Write a short program that reads your user ID, then attempts to set it to
+zero (the root uid),
+and then reads it again with the functions <code>getuid</code> 
+and <code>setuid</code>. Use the man pages at
+<code>man getuid</code> and <code>man setuid</code> to understand what header
+files you need to include and how to call these functions.</p> 
+
+<p>Since the call to <code>setuid</code> may fail, we need to do proper unix
+style error checking. Store the return value from setuid into a variable,
+and follow it up with something like:</p>
+
+<p><code> if( return_val != 0 ) printf("Error to setuid failed! Reason: %s\n", strerror(errno));</code></p>
+
+<p>Again, you can use the man pages to determine which header files to include
+with the commands <code>man printf</code>, <code>man strerror</code>, and
+<code>man errno</code>.</p>
+
+<p>At the end of your program, write out the before and after values of the user ID.
+As the answer to this question, copy and paste your program output.</p>
+
+
+
+<p></p></li><li>Now we're going to modify this program to use the native Linux syscall
+interface as documented in <code>man syscall</code> (this is a different page
+than we accessed before, which was <code>man <b>syscalls</b></code>).
+Copy your program to a new file called <code>native_call.c</code> and replace
+the calls to <code>getuid</code> and <code>setuid</code> with calls to
+<code>syscall</code>. To do so, you will have to determine their ARM
+architecture specific system call numbers by looking at the linux source files
+<code>arch/arm/include/uapi/asm/unistd.h</code><p></p>
+
+<p>As the answer to this exercise, copy and paste your program output.</p>
+
+
+
+<p></p></li><li>Now we will begin the process of writing two new system calls into
+the Linux kernel. The
+first system call will override the protections built into the code for
+<code>setuid</code> and give any process the root user ID (this is a bad thing
+in general, but it is illustrative). You will write the second system call,
+which will print a message into the kernel log.<p></p>
+
+<p><b><i>Note:</i></b>When making changes to the linux source 
+code, add the comment //AOS before each section. This, along with generating 
+file diffs is how we will keep track of the changes made to the kernel.</p> 
+
+<p>There are five discrete tasks we need to accomplish to do so:
+
+</p><ol>
+	<li>Declare a C function prototype inside the kernel
+	</li><li>Write a C function implementation
+	</li><li>Define a new system call number
+	</li><li>Update the ARM architecture system call table
+	</li><li>Update the total number of syscalls value in the kernel
+</li></ol><p></p>
+
+<p>First, we declare two new function prototypes that take no arguments at the 
+bottom of <code>include/linux/syscalls.h</code>. Before doing so, make a backup
+with the command <code>cp syscalls.h syscalls.h.orig</code></p> 
+
+<p>You can use the prototype for
+<code>sys_getuid</code> as a template for this. Make sure that you use
+<code>void</code> in the argument list to indicate no arguments, since in
+C programming a function declared <code>f(void)</code> is not the same as
+a function declared <code>f()</code> (which inidicates that the function may
+take any number of parameters of unknown type). Our new system call is going
+to do something relatively bad (in operating system terms), so call it
+<code>sys_badcall</code>. Make a second prototype that accepts one integer
+parameter and call it what you would like.</p>
+
+<p>As the answer to this exercise, give the two function prototypes you've
+made.</p>
+
+<p></p></li><li>Second,
+create a new file for the implementation under <code>arch/arm/kernel/</code>.
+The naming convention for a file that only implements a system call is to
+call the file by the syscall name, so since our prototype is called
+<code>sys_badcall</code>, you would create the file <code>sys_badcall.c</code>.
+(Additionally, there are other places we could have put this file, but since
+we're only adding this call for the ARM architecture, this is the most
+appropriate place.) Make a second file for your second system call in the
+same place and with the same naming convention.<p></p>
+
+<p>For the implementation of <code>sys_badcall</code>, copy and paste the
+contents of the file found <a href="http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/sys_badcall.c">here</a>. Take a moment
+to look through this file. Notice that the function declaration isn't a normal
+declaration, but actually made through the macro <code>SYSCALL_DEFINE0</code> 
+(the zero comes from that this syscall takes zero arguments, and is defined
+in <code>include/linux/syscalls.h</code>).</p>
+
+<p>For the implementation of your second syscall, use sys_badcall.c as a
+template. You'll need to change the <code>SYSCALL_DEFINE0</code> macro to
+reference the name you came up with, as well as the fact that this function
+accepts an integer parameter. You do this by passing the type and the name of
+the parameter to the macro as such:</p>
+
+<p><code>SYSCALL_DEFINE1( your_name, int, param_name )</code></p> 
+
+<p>In the body of this syscall, use the kernel function <code>printk</code>
+to print a message along with the value of the parameter. You can use
+<code>printk</code> as you would use <code>printf</code>. Be sure to return
+a proper return value from this function.</p>
+
+<p>Leave the answer to this exercise blank. </p>
+
+<p></p></li><li>We want to make sure that our two new files are included in the Linux
+build process. The kernel has a robust build system, so this is easy. Open up
+the makefile in the same directory as your source code files (which should be
+<code>arch/arm/kernel/</code>) and add our two new files to the end of the
+object file list, which starts on the line with <code>obj-y</code> (make sure
+you do not add your files after a <code>\</code> character, as this specifies
+the start of a new line.<p></p>
+
+<p>Leave the answer to this exercise blank.</p>
+
+<p></p></li><li>The implementation of our system calls is done, now we need to add them
+into the kernel's system call interface. We will define two new system call
+numbers in <code>arch/arm/include/uapi/asm/unistd.h</code>.<p></p> 
+
+<p>Before modifying this file, make a copy into <code>unistd.h.orig</code>.
+Then, open the file and write system call numbers 391 and 392 for
+sys_badcall and your own system call near the bottom of the file. Use the 
+other system calls as a template for how to do so.</p>
+
+<p>Next we will modify <code>arch/arm/kernel/calls.S</code>. This is actually
+an ARM assembly language file that defines the system call table. Similar to
+before, first make a backup of <code>calls.S</code> and then
+add two new invocations of the <code>CALL</code> macro near the end
+of the file for <code>sys_badcall</code> and your function.</p>
+
+<p>Finally, we need to update the symbol that tells the kernel how many system
+calls that it has. Go to <code>arch/arm/include/asm/unistd.h</code>, make a
+backup copy, and update the value of <code>__NR_syscalls</code> to 396. This
+seems strange, but on the ARM architecture the system call table can only be
+certain sizes. See the enrichment exercises for more info.</p>
+
+<p>Leave this exercise blank.</p>
+
+<p></p></li><li>At this point the kernel is fully modified and can be recompiled. It's not
+wise to try and rebuild only part of the kernel, so in the base linux source
+directory (the one with <code>arch</code>, <code>init</code>,
+<code>drivers</code>, etc.) you should issue the command <code>make
+clean</code> to remove previous build products.<p></p>
+
+<p>Then, to differentiate your
+next kernel from your current, we'll modify the kernel LOCALVERSION. Rather
+than using the <code>menuconfig</code> like last time, it's faster and easier
+to modify the configuration directly. In the base directory, open the file
+called <code>.config</code> (the leading period means that this is a hidden
+file that is not normally displayed) and modify the
+<code>CONFIG_LOCALVERSION</code> string to reflect the fact that this new
+kernel implements studio 2.</p>
+
+<p>You can now build your new kernel following the procedure outlined in
+studio 1.</p> 
+
+
+
+<p></p></li><li>Once your new kernel is booted and running (remember you can confirm
+this with <code>uname -a</code>), you're now ready invoke your new system
+calls. First, make a copy of <code>lib_call.c</code> and call it 
+<code>badcall_call.c</code>. Then, replace the call to <code>
+setuid</code> with a native system call to <code>sys_badcall</code>.<p></p>
+
+<p>As the answer to this exercise, copy and paste the output from
+<code>badcall_call.c</code>.
+
+
+
+</p><p></p></li><li>Next, we can test the system call you have written. Write a program
+that invokes it with the native system call interface, remembering to
+pass an additional argument. However, this system call writes to the system
+message log. After executing your program, you can check the system log
+with the command <code>dmesg</code>.<p></p>
+
+<p>As the answer to this exercise, copy and paste the last few lines of the
+system message log.</p>
+
+</li></ol>
+
+<h2>Turning in this studio</h2>
+
+<p>To submit this studio, include the answers to exercises given above,
+attach the userspace programs you wrote, as well as diffs of the kernel
+source code files you modified. To create a diff, use the diff program
+with the backup versions of the source code you modified.</p>
+
+<p>For example: <code>diff -up unistd.h unistd.h.orig &gt; unistd.h.diff</code></p>
+
+<p>For this studio, you will submit:</p>
+
+<ul>
+<li>lib_call.c
+</li><li>native_call.c
+</li><li>badcall_call.c
+</li><li>The file you used to test your new system call
+</li><li>The file you created to hold your new system call under <code>arch/arm/kernel/</code>
+</li><li>syscalls.h.diff from <code>include/linux/</code>
+</li><li>unistd.h.diff from <code>arch/arm/include/uapi/asm/</code>
+</li><li>unistd.h.diff from <code>arch/arm/include/asm/</code>
+</li><li>calls.S.diff from <code>arch/arm/kernel/</code>
+</li></ul>
+
+<p>If you don't have an original copy for any of these files, you can find them
+in the original source code package.</p>
+
+<hr>
+<p></p><h3>Optional Enrichment Exercises</h3><p></p>
+<ol>
+<p></p><li>Look at arch/arm/kernel/entry-common.S lines 99-109 and the end of arch/arm/kernel/calls.S and parse out exactly how large the system call table is. A few questions you should be able to answer if you really understand the process: What does the CALL macro do (defined in entry-common.S)? What are the different roles of the symbols NR_syscall and __NR_syscall? Calculate the value of the symbol syscalls_padding at the end of arch/arm/kernel/calls.S for a few different values of NR_syscalls.<p></p>
+
+<p></p></li><li>If you want to know more about the machine-level actions that occur
+during a syscall, you can start with the detailed explanation given in the
+manual to the native system call interface, <code>man syscall</code>.<p></p>
+
+<p>The kernel code that contains the entry point for system calls is found
+in <code>arch/arm/kernel/entry-common.S</code>.</p>
+
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p></body></html>

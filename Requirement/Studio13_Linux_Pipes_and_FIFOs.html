@@ -1,0 +1,182 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0069)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/13_pipes.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 13<br></h2>
+<h2 style="text-align: center;">Linux Pipes and FIFOs</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<!--<p><i>
+Quote
+</i></p>
+<p style="text-indent:10%">&mdash;Character, <i>Book</i>, Chapter N<p>
+-->
+<p>Pipes and FIFOs are efficient ways to do file-like input and output
+between processes. Their biggest benefit is the ability to treat the
+endpoints as formatted input and output streams, just like you would
+read and write from files, or from streams like standard input and output.</p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Create and pass data through pipes with the <code>pipe()</code> system call
+  </li><li>Create and pass data through FIFOs with the <code>mkfifo()</code> function
+  </li><li>Implement a rudimentary active object pattern with processes and FIFOs
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Linux Pipes
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>First we will use the <code>pipe()</code> system call to create a
+communicating child and parent. However, once created, pipes cannot be shared
+between executing processes. Thus, the standard way to use this system call is
+to call the <code>pipe()</code> function, which will create separate pipe 
+endpoints for reading and writing, and then to <code>fork()</code> the process.
+Thus, the child will inherit the pipe endpoints from the parent, and both
+processes now have access.<p></p>
+
+<p>Create a program which:
+</p><ol>
+<li>Calls <code>pipe()</code> to create a pipe with read and write file descriptors (see
+<code>man 2 pipe</code> for details)
+</li><li>Calls <code>fork()</code> to create a child process
+</li><li>After the fork, the child process closes its copy of the read file descriptor
+with <code>close()</code>, and the parent process closes its copy of the write
+file descriptor similarly
+</li><li>After the fork, the child process writes several test messages to the pipe
+</li><li>After the fork, the parent process reads several messages from the pipe and prints them to stdout
+</li></ol><p></p>
+
+<p>Pipe I/O, like file I/O in C, is comparatively low level. There are two
+approaches you can use to read and write to your pipe. You could use
+the integer file descriptors returned by <code>pipe()</code> directly with the <code>read()</code>
+and <code>write()</code> system calls, documented at <code>man 2 read</code> 
+and <code>man 2 write</code>. However you might find it easier to instantiate
+a <code>FILE*</code> stream, which allows you to work with your pipe like it
+was any other file object (i.e. you write to the pipe with <code>fprintf()</code>
+and read from the pipe with intelligent input operations such as <code>fgets()</code>
+or <code>fscanf()</code>. You can open a file stream from a file descriptor
+with the <code>fdopen()</code> function.
+<a href="http://www.gnu.org/software/libc/manual/html_node/Streams-and-File-Descriptors.html">Read more about the difference
+between file descriptors and file streams here</a>. Of course, all of the above
+functions have informative man pages.</p>
+
+<p>Hint: Blocking functions that read the pipe will block indefinitely until
+they are able to return successfully or the write-end of the pipe is closed by
+the writer. The writer should write all of it's data and then call
+<code>close()</code> on its file descriptor when it is done. This allows you to
+write code such as <code>while( fgets() != NULL )</code> to do open-ended reads,
+on the pipe, which will eventually fail and return once the write-end is closed.</p> 
+
+<p></p></li><li>As the answer to this exercise, copy and paste the terminal output from
+your program.
+
+<p></p></li><li>Now we are going to implement a rudimentary active object. An active
+object is an executable context that performs services for other contexts upon
+request. In this case our active object will be a process that listens to one
+end of a FIFO, does some trivial computation when data is recieved, and prints
+the result of that computation to standard output. Any number of other processes
+can open the FIFO's read side and submit data, and the order that requests are
+scheduled depends on a race for the FIFO (recall that writes and reads are
+atomic for less than <code>PIPE_BUF</code> sized data).<p></p>
+
+<p>To begin, create a new file for your active object. This program should:
+</p><ol>
+<li>Create a new FIFO with the function <code>mkfifo()</code>. This is documented
+at <code>man 3 mkfifo</code>. Be careful not to confuse it with the program
+called <code>mkfifo</code> that is documented at <code>man 1 mkfifo</code>.
+</li><li>Open the FIFO with read permission as though it were a file using
+<code>fopen()</code>.
+</li><li>Enter a <code>while</code> loop that continually attempts to read from the
+FIFO. The same code you used to read from a pipe previously can be adapted
+here. Whenever something is read, print it to the standard output.
+</li></ol>
+
+<p>When you run your program it will create a FIFO which will appear in the
+filesystem. In a separate terminal, write some data into the FIFO and validate
+that it is read by your program correctly. For example, if your FIFO is named
+<code>my_ao_fifo</code>, the command "<code>echo "my_message" &gt; my_ao_fifo</code>
+will insert "my_message" into the FIFO. Test your program with larger input
+as well, for example: "<code>cat my_file.c &gt; my_ao_fifo</code>".
+
+</p><p>As the answer to this exercise, copy and paste the terminal output.</p>
+
+
+<p></p></li><li>Now, we will make two modifications to make your active object to perform a minimal but useful
+purpose. After opening a read stream to the FIFO, also open a write stream
+(i.e. <code>fopen( fifo_name, "w" )</code>. Your active object will not ever
+write to this stream, but the fact that it is held open will prevent your
+program from automatically quitting.<p></p>
+
+<p>Next, modify the active object to read from the FIFO with the function
+<code>fscanf()</code>. This allows you to perform formatted input. Your program
+should read integer inputs from the pipe, double the input, and then print out the
+original and the new values. Your input stream should not have any non-integer characters
+and you do not need to handle this case.</p>
+
+<p>Test your program by passing integers into your FIFO, and copy and paste the results
+here.</p>
+
+<p></p></li><li>Lastly, we want to write a set of programs that concurrently
+use the FIFO to request work from the active object. Write two programs that
+open the write end of the fifo with <code>fopen(fifo_name, "w")</code> and
+insert integer values with <code>fprintf()</code>. One of these programs should only insert even numbers,
+and the other should only insert odd numbers. Run these programs
+long enough to verify that they can both write concurrently to the FIFO without
+problem. Examine the output of your active object to verify correctness.<p></p>
+
+</li></ol>
+
+<hr style="width: 100%; height: 2px;">
+<p></p><h3>Things to turn in:</h3><p></p>
+
+<ul>
+<li>The answers to the above exercises
+</li><li>Your pipes program
+</li><li>Your active object reader program
+</li><li>Your active object writer(s) program(s)
+</li></ul>
+
+<hr style="width: 100%; height: 2px;">
+
+<p></p><h3>Optional Enrichment Exercises</h3><p></p>
+<ol>
+<p></p><li>The active object we have constructed in somewhat limited. While it
+allows processes to request some work to be performed, the true purpose of
+the active object is to allow for remote procedure call semantics. This
+would require that processes be able to submit work to be performed, and
+then the results of that work would be returned directly to those specific
+processes (rather than being printed to standard out). Such an implementation
+has several challenges, such as how to multiplex/demultiplex the communication
+channel, and how to create and organize additional channels to enable
+bi-directional communication. Try implementing true remote procedure call
+semantics.<p></p>
+
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p></body></html>

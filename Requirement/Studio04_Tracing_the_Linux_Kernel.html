@@ -1,0 +1,213 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0078)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/04_kernel_tracing.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 4<br></h2>
+<h2 style="text-align: center;">Tracing the Linux Kernel</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<i><p>
+"Yes," he said, "they are quite plain: a hobbit's footprints. Pippin's I think. He is smaller than the other. And look at this!" He held up a thing that glittered in the sunlight. It looked like the new-opened leaf of a beech-tree, fair and strange in that treeless plain.</p>
+
+<p>"The brooch of an elven-cloak!" cried Legolas and Gimli together.</p>
+
+<p>"Not idly do the leaves of Lórien fall," said Aragorn. "This did not drop by chance: it was cast away as a token to any that might follow."</p>
+</i><p></p>
+<p style="text-indent:10%">—<i>The Two Towers</i>, Book III, Chapter 2</p><p>
+
+</p><p>One reality of working with the Linux kernel is that traditional
+troubleshooting tools such as debuggers are much less accessible. Even the
+time honored <code>printk</code> function may be too heavyweight to be used in
+time sensitive code paths such as interrupt handlers and scheduler code.
+However, there are very robust <i>tracing</i> utilities available to the kernel
+developer that allow you to record system behavior and review it after
+execution.</p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Use the Linux system call tracer <code>strace</code>
+  </li><li>Use the Linux kernel tracer (<code>ftrace</code>) via two utilities
+called <code>trace-cmd</code> and <code>kernelshark</code>
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Kernel Tracing
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+
+<p></p></li><li>First, write a C program that only returns zero (i.e. does nothing).
+We'll also be using the test programs we used in previous studios. You can
+download these programs <a href="http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/test_programs.tgz">here</a>.
+Leave this answer blank.<p></p>
+
+
+<p></p></li><li>Execute the system call tracer on your do-nothing program with a command
+such as "<code>strace ./do_nothing</code>". This shows you all of the system
+calls that are made in the process of executing the program (in this case,
+all the effort it takes to simply do nothing). You can get information about
+interpreting the output of <code>strace</code> on the manual page.<p></p>
+
+<p>Pick out two system calls and describe what you think they are accomplishing
+in this context. Every system call listed here has a manual page entry that
+will help you decode what is going on. In this case, you should specify the
+second chapter of the man pages, which covers system calls, otherwise it's
+possible you might get the wrong page. For example, "<code>man write</code>"
+will bring up the documentation for the program called <code>write</code>,
+while "<code>man 2 write</code>" gives you the documentation for the system
+call named <code>write</code>. See the manual pages documentation
+(i.e. "<code>man man</code>") for details.</p>
+
+
+<p></p></li><li>The system call tracer lets us see how our program's commands
+are eventually implemented by intermediate libraries such as the C standard
+library. Use <code>strace</code> to trace the <code>sing</code> program from
+last time. What system call is invoked by the call to <code>printf</code>?<p></p>
+
+<p></p></li><li>This tracer can also help you understand implementation details of
+libraries (as well as program binaries that you lack the source to). Look at
+the trace results of "<code>strace ./dense_mm 100</code>" and compare that
+to the results of "<code>strace ./dense_mm 300</code>". What is different
+about the execution of the program? Which two system calls are involved?
+What do you think is the motivation for using one over the other?<p></p>
+
+<p></p></li><li>Write a short program that uses the C standard library function
+<code>malloc</code>. Allocate ten memory regions of 100 bytes each.
+Profile this program with <code>strace</code>, how are those ten calls to
+<code>malloc</code> translated to system calls?<p></p>
+
+<p></p></li><li>Modify your program to allocate ten memory regions of 1,000,000
+(one million) bytes each. Profile it with strace, how are these calls
+translated to system calls?<p></p>
+
+<p></p></li><li>What do the previous two answers tell you about the implementation
+of <code>malloc</code> in the standard C library?<p></p>
+
+<p></p></li><li>Now we're going to switch to a different tracing utility. The tracer
+itself is called <code>ftrace</code> (short for Function Tracer) and is a
+part of the Linux kernel. We will be using two utilities called
+<code>trace-cmd</code> and Kernelshark to access the function tracer.<p></p>
+
+<p>Install these utilites with the command "<code>sudo apt-get install
+trace-cmd kernelshark</code>" and leave this answer blank.</p>
+
+<p></p></li><li>This tracer is extraordinarily powerful, and a full description is
+beyond the scope of this assignment. However, to generate your first trace,
+execute the command 
+"<code>sudo trace-cmd record -e sched_switch ./dense_mm 100</code>". Make
+sure that in the output for each CPU there are zero dropped events.
+<p></p>
+
+<p>To explain that command a little further, <code>trace-cmd</code> is the
+tracing utility that lets us work with traces. The <code>record</code> token
+specifies that we want to record a new trace. The option 
+<code>-e sched_switch</code> specifies that the event we want to trace is
+invocations to the kernel function <code>sched_switch</code> (which is the
+function responsible for switching processes). Finally, the program to
+record is given at the end. 
+As a result, a file called "<code>trace.dat</code>" will be generated.
+For more information, you can see the man
+pages at "<code>man trace-cmd</code>" and "<code>man trace-cmd-record</code>".
+</p>
+
+<p>Leave this question blank.</p>
+
+<p></p></li><li>Now we will use Kernelshark to inspect our trace. <i><b>Note:</b>
+the questions from here on require a GUI.</i> Open the trace with the
+command "<code>kernelshark trace.dat</code>". By default you will be looking
+at a timeline of each CPU in the system. Each process in the system will be
+given a unique color so you can track individual processes as they are
+scheduled on and off of processors as well as migrated between processors.<p></p>
+
+<p>Start by zooming in on the trace until you can make out discrete events.
+To zoom in: press and hold the left mouse button; drag the cursor to the
+right; and then release to define a zoom window. Zooming out is the reverse:
+press and hold the left mouse button; drag the cursor to the left; and then
+release the mouse button.</p>
+
+<p>Try zooming around your trace. Leave this answer blank.</p>
+
+<p></p></li><li>We can also enable a process-centric view rather than a CPU-centric
+view. Go to the Plots menu, select Tasks, and then find the process
+<code>dense_mm</code> and activate it. Scroll down or enlarge the viewing
+window until you see the process timeline at the bottom. This timeline only
+shows the activity of this process, and different colors represent execution
+time on different processors. Red boxes on this timeline represent time where
+this task was not scheduled on any processor. Leave this answer blank.<p></p>
+
+<p></p></li><li>You can use the CPU and task timelines to see exactly how your process
+executed over its lifetime. What tasks preempt your process
+(<code>dense_mm</code>)? If you zoom in to where you can see discrete events,
+you can mouse over those events to see exactly which processes are switched.<p></p>
+
+<p></p></li><li>One of the CPUs is likely to have spent most of its time servicing your
+process. Look at the other three CPUs. What do they spend their time doing?<p></p>
+
+<p></p></li><li>Is the frequency of <code>sched_switch</code> events the same across all
+processors at all points in time? What do you think is happening?<p></p>
+
+<p></p></li><li>Odds are that <code>dense_mm</code> doesn't create a really interesting
+trace because it can only use one processor at a time.
+Generate a new parallel program trace with the command
+"<code>sudo trace-cmd record -e sched_switch ./parallel_dense_mm 200</code>"
+and open it with Kernelshark. Identify a spot in the timeline where you
+feel the system is not using CPU resources efficiently, what do you think
+is happening?<p></p>
+</li></ol>
+
+<p></p><h3>Optional Enrichment Exercises</h3><p></p>
+<ol>
+<p></p><li>The system call tracer <code>strace</code> can be used on any binary.
+Try using it on common programs such as <code>ls</code>, <code>touch</code>, or
+<code>su</code>. You can even attach it to running programs such as the
+ssh authentication daemon with the <code>-p</code> option.<p></p>
+
+<p>This is a great first step in reverse engineering a binary or looking for
+security vulnerabilities as well, though we don't cover that in this course.
+</p>
+
+<p></p></li><li>The <code>list</code> option can be used with <code>trace-cmd</code>
+to query <code>ftrace</code> about what kinds of tracers are currently 
+available on the system. The command "<code>sudo trace-cmd list -e</code>"
+will print out all available events. You can narrow the possible events
+with simple pattern matching: the command
+"<code>sudo trace-cmd list -e sched</code>" will list all events with
+"sched" in their name, which includes every event in the scheduler subsystem
+as well as a few others. See the man page at "<code>man trace-cmd-list</code>"
+for more info.<p></p>
+
+<p></p></li><li>Ftrace contains many different tracers that let you measure different
+aspects of your system. For example, you can measure total kernel stack size,
+how long it takes interrupts to run, how long interrupts and kernel
+preemptions delay your processes, and more. The combination of Ftrace,
+<code>trace-cmd</code>, and Kernelshark is extremely powerful. Try searching
+the documentation or online to find examples for doing all of the above, as
+well as other neat things people have done.<p></p>
+
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p></body></html>

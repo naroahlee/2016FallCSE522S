@@ -1,0 +1,314 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0077)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/01_welcome_linux.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<style>
+.tt {
+	font-family: "Monospace";
+}
+</style>
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 1<br></h2>
+<h2 style="text-align: center;">Welcome To Linux</h2>
+
+<hr style="width: 100%; height: 2px;">
+
+<p><i>
+"It's a dangerous business, Frodo, going out of your door. You step into 
+the road, and if you don't keep your feet, there is no knowing where you 
+might be swept off to."
+</i></p>
+<p style="text-indent:10%">—Bilbo, <i>The Fellowship of the Ring</i> 
+by J. R. R. Tolkein, Book 1, Chapter 3</p><p>
+
+</p><p>Welcome to Advanced Operating Systems! We're going to start
+by compiling Linux from source. Even if you've done this kind of thing
+before, this studio will get you the source code and resources that 
+this class depends on, along with additional experience working with 
+the Raspberry Pi platform.</p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Set up your <i>Raspberry Pi 3</i>
+  </li><li>Download the Linux source code and apply a source code patch
+  </li><li>Configure the Linux kernel 
+  </li><li>Compile and install your own custom kernel
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Welcome To Linux Studio
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>To start, you need to set up your <i>Raspberry Pi 3</i> so that you're
+able to access a working version of Linux. If you have the reccommended starter
+kit from Canakit, you can follow 
+<a href="http://www.canakit.com/Media/CanaKit-Raspberry-Pi-Quick-Start-Guide-1.0.pdf">
+these directions</a>. <strong>NOTE:</strong> This course was developed using
+the default Raspbian distribution. You're free to use other distributions, but
+you're on your own if something doesn't work properly. You will need a
+graphical interface later in the course.<p></p>
+
+<p>Once you have successfully booted into Linux, you can use the command
+<code>uname</code> to get a variety of information about the currently
+running system, such as the current kernel version or the date on which
+the currently running kernel was compiled. As the answer to this exercise,
+copy and paste the output of the command "<code>uname -a</code>". 
+
+</p><p></p></li><li>Now it's time to download the Linux kernel source code and patch it.
+For a general-purpose project, you would go to <a href="http://kernel.org/">kernel.org</a> and
+download the Linux source from there. However, since we're using the
+<i>Raspberry Pi</i> we'll be starting with a port designed for our platform. 
+The Raspberry Pi project maintains it's own distribution on GitHub, at
+<a href="https://github.com/raspberrypi">https://github.com/raspberrypi</a>.
+We'll be modifying the kernel building guide that you can find
+<a href="https://github.com/raspberrypi/documentation/blob/master/linux/kernel/building.md">
+here</a>.
+<p></p>
+
+<p>To save hours of time, and avoid potential <a href="http://www.cse.wustl.edu/~cdgill/courses/cse522/classFAQ.html#PiFreezing">freezing of your Raspberry Pi</a> during 
+long-running <a href="http://www.cse.wustl.edu/~cdgill/courses/cse522/onboard_compilation.html">local compiles</a>, we will 
+be cross-compiling the kernel using a university-managed server 
+(<code>shell.cec.wustl.edu</code>) and machines in the Linux Lab.</p>
+
+<p>First log into <code>shell.cec.wustl.edu</code> via ssh using your wustl key.</p>
+<p>Create a folder called <code>linux_source</code> to keep all of your source code organized.
+Move into your new folder and issue the following commands, each of 
+which may take several minutes to finish:</p>
+
+<p><code>wget https://github.com/raspberrypi/linux/archive/raspberrypi-kernel_1.20160506-1.tar.gz</code></p>
+
+<p><code>tar -xzf raspberrypi-kernel_1.20160506-1.tar.gz</code></p>
+
+<p>This has the effect of downloading a specific version of the
+<i>Raspberry Pi 3</i> Linux distribution, which is the version that
+this course was developed with. Newer versions exist, which we won't
+use for class but you can pursue on your own time if you'd like. Once
+the files finish unpacking you'll have a new directory, which we
+suggest renaming as something simpler with the <code>mv</code>
+command. We renamed ours <strong>linux</strong>, which is what the
+rest of these instructions will assume you've done as well.</p>
+
+<p> Move into your new <strong>linux</strong> directory, and issue the 
+command <code>make kernelversion</code>, which will tell you which Linux 
+kernel version you've just checked out.  As the answer to this exercise, copy the output of
+the command <code>make kernelversion</code></p>
+
+<p></p></li><li>Next, you will apply a Linux source code patch. Source code
+patches are the way that cutting-edge kernel software is shared among kernel
+hackers. Long before features find their way into major distributions they
+exist as source code patches, and many contributions that aren't accepted into the
+Linux mainline exist only as source code patches. In this case, we're going to
+apply the PREEMPT_RT patch, which allows the kernel to be fully preemptible.<p></p>
+
+<p>First, go to <a href="https://www.kernel.org/pub/linux/">kernel.org/pub/linux</a>, 
+which is the public Linux source code repository, and click through "kernel",
+"projects", and then "rt". You will need to use the answer to the previous
+exercise in order to find the correct source code patch that matches the
+version of the Linux kernel that you're using. For example, if you have source
+code version "4.0.7", then you will move to the directory "4.0" and get
+"patch-4.0.7-rt11.patch.gz". (<strong>Warning: do NOT use the file that starts
+with "patches"</strong>, the patch file contains the complete, current version
+of the patch, while the patches file contains data necessary to update from the
+last issued version of the rt patch.)</p>
+
+<p>Move into your <code>linux_source</code> directory and use <code>wget</code> to obtain the 
+appropriate patch file ending in gz. To apply the patch, move into your
+<strong>linux</strong> source code directory (the one with arch, drivers, init, etc.) 
+and issue the following command: (you will need to change version numbers)</p>
+<p><code>zcat ../patch-4.0.7-rt11.patch.gz | patch -p1</code></p>
+
+<p>The <code>zcat</code> command works like the <code>cat</code> command, but 
+does so for compressed files. If you just issue the command
+<code>zcat ../patch-4.0.7-rt11.patch.gz</code> by itself you'll see
+that the source code patch is actually stored in <code>diff</code> format.
+The vertical bar character pipes the output of <code>zcat</code> into 
+another program called <code>patch</code>, which just applies each individual
+diff to the appropriate files in the source code directory.</p> 
+
+<p>If no errors are reported, then proceed to the next step. Leave this
+answer blank.</p>
+
+<p></p></li><li>Now it's time to configure the Linux kernel. There are thousands of
+possible configuration options- many quite interesting and many quite dull.
+Rather than setting all these options manually, we'll
+we'll create the default <i>Raspberry Pi 3</i> configuration and then
+tweak it. Issue the commands:<p></p>
+
+<p><code>module add raspberry</code> (this adds the cross-compiler to your PATH variable)</p>
+<p><code>KERNEL=kernel7</code> (this is used by some build scripts)</p>
+
+<p><strong>Note that in some terminal environments (depending on how you have set up
+your account on <code>shell.cec.wustl.edu</code>) you may need to do this using the set command:
+<code>set KERNEL=kernel7</code></strong></p>
+
+<p><code>make -j8 ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- bcm2709_defconfig</code></p>
+
+<p>To reiterate, if you were building a general purpose kernel, you wouldn't use the
+previous two commands. They're setting a default configuration for Raspberry Pi . 
+Next, we want to set custom configuration options. Issue the command:</p>
+
+<p><code>make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig</code></p>
+
+<p>After a moment, you'll get a kernel configuration menu. As you can see,
+there are a _lot_ of options. 
+For now, we're just going to do two things.
+First, we will enable the RT_PREEMPT patch we applied
+previously. Go into "Kernel Features", and then
+select "Preemption Model". If the patch was applied correctly, you'll
+have the option "Fully Preemptible Kernel (RT)", which you should select.</p>
+
+<p>Next you'll add your own unique identifier to the kernel you build.
+Navigate to "Local version" under "General setup". The local version
+string you specify here will be appended to the output of the 
+<code>uname</code> command. If you applied the default <i>Raspberry Pi</i>
+configuration correctly, this should be set to "<code>-v7</code>". Go ahead
+and add your own unique identifier, though recall that <code>uname</code>
+already gives you the kernel version number, the day and time the kernel was
+compiled, as well as other info.<b>Warning: do not include a space in the
+local version string- this will break the build script when you run 
+<code>sudo make modules_install</code> in the future</b>.</p>
+
+<p>As the answer to this exercise, find a neat sounding option and use the
+"H" key to bring up a short description. Provide the option's name, a short
+summary, and the option's symbol. Once you're done, exit the configurator
+and be sure to answer "Yes" when asked to save your changes.</p> 
+
+
+<p></p></li><li>Finally, we're able to start compiling the kernel. This would take 
+about an hour and a half if we were <a href="http://www.cse.wustl.edu/~cdgill/courses/cse522/onboard_compilation.html">building 
+the kernel locally on your Raspberry Pi</a>
+instead of cross-compiling.<p> Because kernel compiles are 
+computationally intensive, you should not run them on the <code>shell.cec.wustl.edu</code> server,
+and instead should run the <code>qlogin</code> command to log into a Linux Lab host 
+to run your compilations.</p><p>
+
+Once you are logged into one of the Linux Lab machines, confirm that you are still in
+your <code>linux_source/linux</code> directory (or if not <code>cd</code> into it).
+Then, issue the following commands to cross-compile the kernel:</p>
+
+<p><code>module add raspberry</code></p>
+<p><code>KERNEL=kernel7</code></p>
+<p><code>make -j8 ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- zImage modules dtbs</code></p>
+
+<p>The compile will take several minutes. Once it's done, issue the following command:</p>
+<p><code>mkdir ../modules</code></p><p> 
+
+This will create a directory that the cross-compiler will use to store
+the kernel modules that it creates. You will later transfer these to
+your Raspberry Pi. Then issue the command:
+
+</p><p><code>make -j8 ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- 
+INSTALL_MOD_PATH=../modules modules_install</code></p>
+
+<p>Leave this answer blank.</p>
+
+<p></p></li><li>Now we need to transfer our recently compiled kernel and modules back to our 
+Raspberry Pi in order to install them. 
+
+Open up a local terminal on your Pi.
+As you did on the server, create a directory called <code>linux_source</code> that will
+serve as a place to organize your code. Move inside your <code>linux_source</code> directory 
+and create a directory called <code>lib</code> and another directory called
+<code>boot</code>. The naming is important, because the Pi's version of sftp will 
+only transfer entire directories if the source and destination folders have the 
+same name. From your <code>linux_source</code> directory run the following commands:<p></p>
+
+<p><code>sftp [your wustl key]@shell.cec.wustl.edu</code></p>
+<p><code>cd linux_source</code></p>
+<p><code>get -r modules/lib/</code></p>
+<p><code>get -r linux/arch/arm/boot/</code></p>
+<p><code>get linux/scripts/mkknlimg</code></p>
+<p><code>quit</code> (to get back to your Pi)</p>
+
+<p>Back up your directories <code>/lib</code> and <code>/boot</code>, because you will 
+be modifiying their contents. To do this, we used 
+<code>sudo cp -r /lib ~/Desktop/lib_backup</code> and a similar
+command for <code>/boot</code>. You should be in
+your <code>linux_source</code> directory. If not navigate there and
+run the following commands:</p>
+
+<p><code>cd lib</code></p>
+<p><code>sudo cp -rd * /lib/</code></p>
+<p><code>cd ..</code></p>
+<p><code>KERNEL=kernel7</code></p>
+<p><code>sudo cp boot/dts/*.dtb /boot/</code></p>
+<p><code>sudo cp boot/dts/overlays/*.dtb* /boot/overlays</code></p>
+<p><code>sudo cp boot/dts/overlays/README /boot/overlays</code></p>
+<p><code>sudo ./mkknlimg boot/zImage /boot/$KERNEL.img</code></p>
+
+<p>At this point, your new kernel is installed. When you reboot, you'll be
+running your very own, custom kernel.</p>
+
+<p> Go ahead and reboot now. If everything went OK,
+the new system should look and feel the same as before. You can verify
+that your new kernel is running with the command <code>uname -a</code>.
+In particular, the build date should be today, the version string should
+include the local version string you specifed during configuration, and
+your Linux source code version with
+the characters "rt" should appear, which indicates that the PREEMPT_RT patch 
+has been applied.</p>
+
+<p>As the answer to this exercise, copy the output of <code>uname -a</code>.</p><p>
+
+</p><p>Congratulations! You've just compiled an operating system from source!</p>
+
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Optional Enrichment Exercises</h3><p></p>
+<ol>
+<p></p><li>The instructions above are lengthier and convoluted because we're
+building a kernel specifically for the <i>Raspberry Pi 3</i>. If you'd like
+the experience of bulding a general purpose kernel, or if you're curious about
+building on a different machine, you can do so easily. First, go to
+kernel.org and download any recent release. Unzip the release (and if you'd like,
+apply the PREEMPT_RT patch). Then, building a general kernel is just a
+few commands:<p></p>
+
+<p><code>make menuconfig</code></p>
+<p><code>make -jN</code> where N is the number of cores you want to use to compile</p>
+<p><code>sudo make modules_install install</code></p>
+
+<p>That's all there is to it! The <code>install</code> targets will
+automatically and correctly install the new kernel on the common
+Linux distributions. In the base source code directory there's a file called
+README which contains compilation and installation instructions for a wide
+range of scenarios.</p>
+
+<p>For a sufficently powerful machine, building a new kernel is pretty
+painless. Our lab's 16 core, 3.2Ghz Intel machines take about 15 minutes
+to compile and install.</p>
+
+<p></p></li><li>Follow the instructions for <a href="http://www.cse.wustl.edu/~cdgill/courses/cse522/onboard_compilation.html">Compiling 
+On-Board your Raspberry Pi</a>, and as the answer to this exercise summarize what
+differences you noted (including any problems you encountered) compared to the
+cross-compilation approach noted above.
+
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+
+</p></body></html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0076)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/09_rt_scheduler.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 9<br></h2>
+<h2 style="text-align: center;">Real-Time Scheduling</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<p><i>
+Frodo could see them, small black figures in rank upon rank, marching swiftly and silently, passing outwards in an endless stream.
+</i></p>
+<p style="text-indent:10%">—<i>The Two Towers</i>, Book IV, Chapter 8</p><p>
+
+</p><p>Linux's real-time scheduling classes are for processes that require a great
+deal of control over how they execute. They can be used to define programs that
+execute in very specific ways, and are even used preempt the operating system 
+kernel.</p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Write a program that uses the real-time scheduler
+  </li><li>Use the kernel tracer to examine how this program runs
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Real-Time Scheduler
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>First, we'll need a program to run as a real-time workload. In the last
+studio you created an infinite-loop program, which we'll modify to use here.
+One problem / feature is that a real-time workload is capable of preempting the
+kernel itself- this can make it impossible for the kernel to stop misbehaving
+programs, so in general it's a very bad idea to create such programs with
+infinite loops. Rather than using an infinite loop, modify your program so
+that, rather than looping forever, it increments a loop index to five hundred million
+(500,000,000). This will provide a CPU bound task that's guaranteed to
+finish.<p></p>
+
+<p><i>NOTE: Modern compilers are smart enough to optimize your loop away.
+Turn off optimizations for this exercise.</i> With no optimization, 
+on the 900 MHz Raspberry Pi 3, the instructor's program 
+runs for about five seconds. For -O1 it runs for about a half second. For
+any higher optimization level the program returns immediately. Use the
+<code>time</code> command to ensure that your program runs for around five
+seconds.</p>
+
+
+
+<p></p></li><li>Now, use the <code>trace-cmd</code> command to record sched_switch
+events during an execution of your program. Recall that the synatx for
+this is "<code>sudo trace-cmd record -e sched_switch ./your_program arg1 arg2 ...
+</code>". Then use Kernelshark to inspect the trace.<p></p>
+
+<p>Examine how your program executes. List three processes that interefere
+with the execution of your program. Make a copy of your trace to inspect later-
+next time we run <code>trace-cmd</code> it will overwrite this one.</p>
+
+
+<p></p></li><li>Modify your workload program so that it sets and uses the SCHED_RR
+scheduling class. This program should take two arguments- the first should specify the
+core to execute upon, and the second should specify the real-time scheduling
+priority.<p></p>
+
+<p>To do so, you should use the function <code>sched_setscheduler()</code>
+that is documented at <code>man sched_setscheduler</code>. The required
+data structure, <code>sched_param</code>, is also documented at that page.
+Be sure to check the return value from this function for success, and print
+out an appropriate error message in the event of failure.</p>
+
+
+<p></p></li><li>Run your program under <code>trace-cmd</code> with a real-time
+priority of one. 
+Inspect the output in Kernelshark. What do you notice? Do any processes
+preempt your program? If so, which ones?<p></p>
+
+<p></p></li><li>Compare this execution trace to your original non-real-time trace.
+Is there any qualitative
+difference in how these interruptions occur?<p></p>
+
+<p></p></li><li>Filter the text box to only show events from the processor that your
+program used. To do so, go to the <code>Filter</code> menu and select
+<code>list CPUs</code>. How many <code>sched_switch</code> events were 
+recorded on this CPU?<p></p>
+
+<p>Filter your list to a different CPU. How many <code>sched_switch</code>
+events were recorded there?</p>
+
+<p></p></li><li>Use the command <code>ps -e -o cmd,rtprio</code> to get a list of
+all processes on the system and their real-time priorities. A dash in the
+priority column means that this process does not have a real-time priority.<p></p>
+
+<p>Which real-time priorities do you see used? Give two processes with a real-time
+priority and speculate why they deserve a real-time priority.</p>
+
+
+<p></p></li><li>Run your program again with a real-time priority of 99. How many
+<code>sched_switch</code> events occur on your program's processor? Is your
+program ever preempted? If so, when and where is it preempted?<p></p>
+
+<p></p></li><li>Our next goal is to execute
+multiple simultaneous real-time processes together, but this is slightly trickier
+than you might think. If you create one real-time process, it will be
+impossible to create a second real-time process on that same processor until
+the first one finishes. Why is this?
+<p></p>
+
+<p></p></li><li>Make a copy of your real-time workload program. Modify it so that
+it takes a third argument, which will be the number of real-time tasks to
+create. Using this value, insert appropriate calls to
+the <code>fork()</code> function. This function should be called
+AFTER you have set the program's
+real-time priority, but BEFORE you start executing your work loop.<p></p>
+
+<p></p></li><li>Use your modified program to create three simultaneous real-time
+workloads. Trace the execution, and inspect the trace in Kernelshark. What
+do you see? Use the markers to measure the length of a round-robin time-slice.
+Recall that you can set marker A with a left mouse click, and set marker B
+with shfit + left mouse click.<p></p>
+
+<h3>Things to turn in</h3>
+<ul>
+<li>The above exercises
+</li><li>Your first real-time workload
+</li><li>Your modified real-time workload
+</li></ul>
+
+</li></ol>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><h2>Optional Enrichment Exercises</h2>
+
+<ol>
+<li>Linux contains two other real-time scheduling classes, called
+<code>SCHED_FIFO</code> and (much more recently) <code>SCHED_DEADLINE</code>.
+Under the former policy, tasks are allowed to run to completion or until they
+give up the processor with <code>sched_yield()</code>. Under the latter policy,
+tasks are given deadlines for completion, and scheduled in order to best meet
+those deadlines. Try them out!
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p></body></html>

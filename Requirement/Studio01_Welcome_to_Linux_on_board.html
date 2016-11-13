@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0072)http://www.cse.wustl.edu/~cdgill/courses/cse522/onboard_compilation.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<style>
+.tt {
+	font-family: "Monospace";
+}
+</style>
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Compiling On-Board your Raspberry Pi</h2>
+
+<hr style="width: 100%; height: 2px;">
+
+<p>Cross compilation is advantageous in many cases, especially on a multi-core
+server with significantly more processing power than your Raspberry Pi.  However,
+in some cases such resources may not be available and in any case it's worth
+understanding how to build kernels and other software directly on-board a Raspberry Pi
+computer itself.</p><p>
+
+To get started, first ssh into your Raspberry Pi computer using its IP address (which you
+can obtain by issuing the <code>ifconfig</code> or <code>hostname -I</code> command in
+a terminal window on your Raspberry Pi.</p><p>  If you encounter problems with your Raspberry
+Pi freezing up during any of the steps below, you may want to reboot it, obtain its IP 
+address, and then unplug the HDMI, mouse, and keyboard cables from your Raspberry Pi (to
+avoid problems involving their device drivers) before accessing the running Raspberry Pi 
+(solely) through SSH.</p><p>
+
+<strong>Please note that the instructions that follow also can be performed directly within
+a terminal window on the Raspberry Pi itself, though we assume SSH is used to avoid problems
+with the Raspberry Pi itself freezing up during compiles and other long-running 
+operations.</strong></p><p>
+
+
+</p><p></p><h3>Instructions for On-Board Kernel Compilation</h3><p></p>
+
+<ol>
+<p></p><li>As you did in the first studio, make a new directory called 
+<code>linux_source</code> to organize your source 
+code, move into that directory,
+and then issue the following commands, each of which will take several minutes:<p></p>
+
+<p><code>wget https://github.com/raspberrypi/linux/archive/raspberrypi-kernel_1.20160506-1.tar.gz</code></p>
+<p><code>tar -xzf raspberrypi-kernel_1.20160506-1.tar.gz</code></p>
+
+<p>Once the files finish unzipping you'll have a new directory, which you should again 
+rename to be something simpler like <code>linux</code>.</p>
+
+<p></p></li><li>Next, you will apply a Linux source code patch (the RT_PREEMPT
+patch, which has the identifier "rt").  Go to
+<a href="https://www.kernel.org/pub/linux/">kernel.org/pub/linux</a>, 
+which is the public Linux source code repository, and click through "kernel",
+"projects", and then "rt". You again will need to use the correct source code
+patch that matches the version of the Linux kernel that you're using. 
+For example, if you have source code version "4.0.7", then you will move to 
+the directory "4.0" and download "patch-4.0.7-rt11.patch.gz". (<strong>Warning: 
+do NOT use the file that starts with "patches"</strong>, the patch file contains 
+the complete, current version of the patch, while the patches file contains data 
+necessary to update from the last issued version of the rt patch.)<p></p>
+
+<p>Download the appropriate patch file ending in gz, and move it into the 
+<code>linux_source</code> directory, or from that directory simply fetch it
+directly using the <code>wget</code> command. To apply the patch, move into 
+your <code>linux</code> source code directory (the one with arch, drivers, init, etc.) 
+and issue the following command: (you will need to change
+version numbers)</p>
+
+<p><code>zcat ../patch-4.0.7-rt11.patch.gz | patch -p1</code></p>
+
+<p></p></li><li>Now we'll verify that our system has all of the
+required prerequisites for building the kernel, by issuing the command:<p></p>
+
+<p><code>sudo apt-get install bc ncurses-dev</code></p>
+
+<p></p></li><li>To configure the Linux kernel (starting from reasonable default settings
+for the Raspberry Pi), issue the commands:<p></p>
+
+<p><code>KERNEL=kernel7</code> (this is used by some build scripts)</p>
+<p><code>make bcm2709_defconfig</code></p>
+
+Next, we want to set a custom configuration option. Issue the command:<p></p>
+
+<p><code>make menuconfig</code></p>
+
+<p>After a moment, you'll get a kernel configuration menu. First, we
+will enable the RT_PREEMPT patch we applied previously. Go into
+"Kernel Features", and then select "Preemption Model". If the patch
+was applied correctly, you'll have the option "Fully Preemptible
+Kernel (RT)", which you should select.</p>
+
+<p>Next you'll add your own unique identifier to the kernel you build.
+Navigate to "Local version" under "General setup". The local version
+string you specify here will be appended to the output of the 
+<code>uname</code> command. If you applied the default <i>Raspberry Pi</i>
+configuration correctly, this should be set to "<code>-v7</code>". Go ahead
+and add your own unique identifier, though recall that <code>uname</code>
+already gives you the kernel version number, the day and time the kernel was
+compiled, as well as other info.<b>Warning: do not include a space in the
+local version string- this will break the build script when you run 
+<code>sudo make modules_install</code></b>.</p>
+
+<p>Once you're done, exit the configurator
+and be sure to answer "Yes" when asked to save your changes.</p> 
+
+
+<p></p></li><li>Finally, we're able to start compiling the kernel, which will take 
+about an hour and a half.  To begin, issue the command:<p></p>
+
+<p><code>make -j4 zImage modules dtbs</code></p>
+
+<p>Once it's done, issue the following commands:</p>
+
+<p><code>KERNEL=kernel7</code> (if you've logged out since issuing this command before)</p>
+<p><code>sudo make modules_install</code></p>
+<p><code>sudo cp arch/arm/boot/dts/*.dtb /boot/</code></p>
+<p><code>sudo cp arch/arm/boot/dts/overlays/*.dtb* /boot/overlays/</code></p>
+<p><code>sudo cp arch/arm/boot/dts/overlays/README /boot/overlays/</code></p>
+<p><code>sudo scripts/mkknlimg arch/arm/boot/zImage /boot/$KERNEL.img</code></p>
+
+<p>At this point, your new kernel is installed. When you reboot, you'll be
+running your very own, custom kernel.</p>
+
+<p> Go ahead and reboot now. If everything went OK,
+the new system should look and feel the same as before. You can verify
+that your new kernel is running with the command <code>uname -a</code>.
+In particular, the build date should be today, the version string should
+include the local version string you specifed during configuration, and
+your linux source code version with
+the characters "rt" should appear, which indicates that the PREEMPT_RT patch 
+has been applied.</p>
+
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+
+</p></body></html>

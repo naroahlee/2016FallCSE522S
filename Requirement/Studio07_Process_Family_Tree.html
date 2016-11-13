@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0073)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/07_processes.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 7<br></h2>
+<h2 style="text-align: center;">Process Family Tree</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<p><i>
+There were many Bagginses and Boffins, and also many Tooks and Brandybucks; there were various Grubbs (relations of Bilbo Baggins' grandmother), and various Chubbs (connexions of his Took grandfather); and a selection of Burrowses, Bolgers, Bracegirdles, Brockhouses, Goodbodies, Hornblowers and Proudfoots. Some of these were only very distantly connected with Bilbo, and some of them had hardly ever been in Hobbiton before, as they lived in remote corners of the Shire.
+</i></p>
+<p style="text-indent:10%">—<i>The Fellowship of the Ring</i>, Book 1, Chapter 1</p><p>
+
+</p><p>Processes are one of the most critical abstractions in any operating system.
+They are the basis for scheduling, memory management, accounting, and more.
+Even the kernel itself runs as a process!</p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Write simple userspace programs working with processes
+  </li><li>Learn how to do simple kernel module I/O
+  </li><li>Write a kernel module that explores the process data structure,
+<code>task_struct</code>
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Process Family Tree
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>Write a short program called <code>fork.c</code>. Use the 
+<code>fork()</code> function to spawn a child process from a parent process.
+The parent process should print a statement before the fork and print out
+the child's PID after the fork. The child process should print out a
+statement after it has been spawned. Give your program's output as the answer to this question.<p></p>
+
+<p></p></li><li>Write a second program called <code>tree.c</code> that imitates a
+family tree. Your first process should spawn two children, and then each
+of those two children should spawn their own two children, and so forth.
+Take a single integer parameter from the command line that controls the
+total number of generations. Before exiting, all processes should
+sleep for 120 seconds. (<i><b>Warning</b></i>: Bear in mind that
+this will create 2^(n+1) - 1 processes, where n is the number you provide. For
+n=5 you will create 63 processes, for n=10 you will create 2047, etc. Large
+numbers will crash and/or starve your system!) Show output of your program 
+with a couple of different tree depths as the answer to this question.<p></p>
+
+<p></p></li><li>Now we're going to take a detour back into kernel module design. From
+the root of your source code tree, find and copy the file
+<code>/samples/kobject/kobject-example.c</code> into your current working
+directory. This is a kernel module that uses a feature called kobjects to
+provide an interface to exchange data between the kernel and userspace. Each
+data item is called an <i>attribute</i>, and for each attribute you provide
+a <code>show</code> and <code>store</code> function that is called when
+userspace reads and writes these values, respectively.<p></p>
+
+<p>This particular module provides three attributes: <code>foo</code>,
+<code>baz</code>, and <code>bar</code>. Once loaded, you can find them in
+the <code>sysfs</code> filesystem under 
+<code>/sys/kernel/kobject-example/</code>. Modify this file so that a system
+log message is printed when any of foo, baz, or bar are updated. This 
+log message should include the old value as well as the new value.</p>
+
+<p>You can read values out of these attributes with the command 
+<code>cat</code>, and you can write values into these attributes with the
+echo command, e.g. "<code>echo 42 &gt; foo</code>" will write the value 42
+into the attribute <code>foo</code>. Note that you must have a root terminal
+to write into these commands (i.e. <code>sudo echo</code> doesn't work). You can
+get a root terminal with the command <code>sudo bash</code>.
+As the answer to this question demonstrate your module successfully
+ changing the values of<code>foo</code>, <code>bar</code>, and <code>baz</code></p>
+
+<p></p></li><li>Now we're going to write a kernel module that reads a PID through the
+<code>sysfs</code> interface and prints that process' family tree in the
+system log.<p></p>
+
+<p>Make a new kernel module called <code>family_reader.c</code> that is
+based off of your modified <code>kobject-example.c</code>. 
+This module should create a single system attribute under 
+<code>/sys/kernel/fam_reader/</code>. When you write a PID to this attribute,
+your module should try to print out the PID's family tree. There are a few
+steps involved:</p>
+
+<p><i>Side note: The modern Linux kernel makes a distinction between "real"
+and "virtual" PIDs for the benefit of migrating processes across different
+virtual hosts. The</i> virtual PID <i>is the PID that a process sees from
+userspace. You can read more 
+<a href="https://lwn.net/Articles/168093/">here</a>.</i></p>
+
+<ol>
+<li>You will need to convert your integer input into a proper kernel PID. Use
+the function <code>find_vpid()</code>, which returns a <code>pid*</code>. This
+function can fail!
+</li><li>Next you can convert your <code>pid*</code> to a <code>task_struct*</code>
+with the function <code>pid_task()</code>. The <code>task_struct</code> is the
+primary record-keeping component of a process in Linux. This function can fail!
+</li><li>Once you have a <code>task_struct*</code>, you can access any of
+the data it stores. In particular, the <code>real_parent</code> field stores a 
+<code>task_struct*</code> pointer to the process that cloned it, and the
+<code>comm</code> field is a string that gives the command name. <i>Note:
+there is a separate field called <code>parent</code>, which is not what we
+want for this project. The parent is the logical parent that shares process
+group signals and allows for waiting between parent and child.</i>
+</li><li>Work your way back up the family tree, printing out each task's PID and
+command name, all the way back to the <code>init</code> task with a PID of
+one.
+</li></ol>
+
+<p>When you pass a PID to this module, it should output that task's PID and
+command name, and then the PID and command name of every task that came before
+it, all the way back to <code>init</code>. Note, the command name for PID one
+will actually be <code>systemd</code>. When you pass an invalid PID, your
+module should fail gracefully and print an appropriate error message.</p>
+
+<p></p></li><li>Test your module. What happens when you pass a PID that doesn't exist?
+What happens when you pass zero?<p></p>
+
+<p></p></li><li>Create a long-running process like <code>top</code> and pass it's PID
+to your module. Copy and paste the results here.<p></p>
+
+<p></p></li><li>Execute <code>tree.c</code> with an input of five generations. Pass
+one of the last PIDs to your module. Copy and paste the results here.<p></p>
+
+</li></ol>
+
+<hr>
+<p></p><h2>Things to turn in</h2><p></p>
+
+<ul>
+<li>The above exercises
+</li><li>fork.c
+</li><li>tree.c
+</li><li>Your modified kobject_example.c
+</li><li>family_reader.c 
+</li></ul>
+
+<p></p><h3>Optional Enrichment Exercises</h3><p></p>
+<ol>
+<p></p><li>The task struct includes a lot of interesting process data and
+process accounting. Try printing out some other fields.<p></p>
+
+<p></p></li><li>The file <code>sched.c</code> includes a lot of facilities for
+working with tasks, including the ability to modify specific tasks or
+iterate over every task in the system with macros such as
+<code>do_each_process()</code>. See what you can dig up!
+<p></p>
+
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p></body></html>

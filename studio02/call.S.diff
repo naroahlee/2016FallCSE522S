@@ -1,0 +1,12 @@
+--- calls.S	2016-09-01 14:04:03.136218671 -0500
++++ calls.S.bak	2016-09-01 14:02:40.976724306 -0500
+@@ -400,9 +400,6 @@
+ 		CALL(sys_userfaultfd)
+ 		CALL(sys_membarrier)
+ 		CALL(sys_mlock2)
+-/* 390 */
+-		CALL(sys_badcall)
+-		CALL(sys_naroahkmsg)
+ #ifndef syscalls_counted
+ .equ syscalls_padding, ((NR_syscalls + 3) & ~3) - NR_syscalls
+ #define syscalls_counted

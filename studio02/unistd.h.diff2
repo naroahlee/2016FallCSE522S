@@ -1,0 +1,12 @@
+--- unistd.h	2016-09-01 14:05:01.885874049 -0500
++++ unistd.h.bak	2016-09-01 14:04:25.616085358 -0500
+@@ -19,8 +19,7 @@
+  * This may need to be greater than __NR_last_syscall+1 in order to
+  * account for the padding in the syscall table
+  */
+-/* Naroah 160901 */
+-#define __NR_syscalls  (396)
++#define __NR_syscalls  (392)
+ 
+ #define __ARCH_WANT_STAT64
+ #define __ARCH_WANT_SYS_GETHOSTNAME

@@ -1,0 +1,192 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0071)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/14_sockets.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 14<br></h2>
+<h2 style="text-align: center;">Linux Sockets</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<!--
+<p><i>
+Quote
+</i></p>
+<p style="text-indent:10%">&mdash;Character, <i>Book</i>, Chapter N<p>
+-->
+
+<p>Sockets are a fundamental abstraction for many types of
+computer communication- both inside a single machine and over networks.
+They are the basic primitives used to connect machines together, and
+they are used to implement all kinds of networked communication. Despite
+this, they are surprisingly simple to use, as they encapsulate (and hide) 
+virtually all of the technical details needed to accomplish such 
+communication, and are accessed (like many other things in Linux) just 
+like you were reading or writing a local file or pipe.</p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Use sockets to send data between processes within a system
+  </li><li>Use sockets to recieve data from the Internet
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Sockets Studio
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>The first goal of this studio is to establish a local connection between
+two processes on your Raspberry Pi. We'll write two programs, a server
+and a client. First we will write the server, whose role is to create 
+the communications channel and to
+<i>listen</i> for incoming connections. A good example of how to construct
+a basic server can be found in <code>man 2 bind</code> under the section
+labeled EXAMPLE.<p></p>
+
+<p>Your server should perform the following actions:
+</p><ol>
+<li>First, create a socket with the system call <code>socket()</code>. To
+create a local connection use the domain <code>AF_LOCAL</code>
+(or equivalently <code>AF_UNIX</code>), the connection type
+<code>SOCK_STREAM</code>, and protocol zero.
+</li><li>Second, create the communications channel with the <code>bind()</code>
+system call. This associates your socket from step one with a machine-visible
+address. In the case of <code>AF_LOCAL</code>, this address is a path in the
+file system. Directions on how to specify a local address in this way can be
+found at <code>man 7 unix</code>.
+</li><li>Now, having created the channel, your program needs to declare that it is
+going to listen for incoming connections with the <code>listen()</code> system
+call. Sockets only allow one process to connect at a time, so the second parameter
+determines how many connection requests can wait in line before subsequent
+ones are rejected.
+</li><li>Use the <code>accept()</code> system call to accept a connection
+over the socket interface. If no connection is immediately available then this
+system call will, by default, cause your program block until another program
+attempts to connect.
+</li><li>Finally, use the system call <code>unlink()</code> in order to destroy
+the socket and connection before the program returns.
+</li></ol>
+
+<p>When your program successfully returns from <code>accept()</code> the
+connection has been established. You may read and write data over the channel
+with the lower level <code>read()</code> and <code>write()</code> system
+calls, or you can instantiate a stream interface with the <code>fdopen</code>
+function. When doing so, be sure to use the socket descriptor returned by
+the call to <code>accept()</code>, not the one created by the initial call
+to <code>socket()</code>.</p>
+
+<p><i><b>Note:</b></i> Many things can go wrong with socket-based communication.
+As usual, you should always check function return codes to detect errors. Recall
+that most functions allow you to print a descriptive error statement with a
+line of code such as:
+<code>printf("Program error, reason: %s\n", strerror(errno))</code>.
+This will require including the headers <code>string.h</code> and
+<code>errno.h</code>.
+
+</p><p></p></li><li>Now we will write a client program. We will make use of the previously
+created communications channel. In particular:<p></p>
+
+<ol>
+<li>Create a communications endpoint with a call to the <code>socket()</code>
+system call.
+</li><li>Establish a connection with the <code>connect()</code> system call. This
+requires using the same socket address struct as the call to <code>bind()</code>.
+</li></ol>
+
+<p>At this point, barring any errors, your communcations channel is ready to
+be used. Send some messages to the server program and print them to standard
+output in order to validate the functionality.
+Copy and paste the server output as the answer to this exercise. 
+Note that, like with pipes,
+a call to read an empty socket will block until data is available.</p>
+
+<p></p></li><li>If you haven't already, refactor your server with an event loop so that
+it will stay alive through multiple connection attempts. This requires that
+your server make multiple calls to <code>accept()</code>, but not to
+<code>listen()</code> or <code>bind()</code>. 
+Print a message each time a new connection is established and run your client program
+several times with the same server to validate this behavior. Copy and paste
+the server output as the answer to this exercise.<p></p>
+
+<p></p></li><li>Rather than having your server stay alive forever, have your program
+terminate when it recieves the message "quit". Use the function
+<code>strncmp</code> to test for string equality. The similar function
+<code>strcmp</code> is difficult to use with large buffers.<p></p>
+
+<p>Copy and paste terminal output demonstrating this functionality, as the answer to this exercise.</p>
+
+<p></p></li><li>The primary use of sockets is to manage networked connections between
+remote computers. The final exercise of this studio will have you connect to
+a Raspberry Pi at the TA's house and receive a message.<p></p>
+
+<p>Use your client program as a template, but we will modify it to use an
+internet connection rather than a local connection. You will connect to
+port <code>17000</code> at IP address <code>71.14.185.58</code> for this 
+exercise.</p>
+
+<ol>
+<li>Include the files <code>netinet/ip.h</code> and <code>arpa/inet.h</code>
+in your program.
+</li><li>Modify your call to <code>socket()</code> to specify an internet connection
+type with <code>AF_INET</code>.
+</li><li>Create a struct of type <code>sockaddr_in</code> to specify the internet
+address. This struct is documented at <code>man 7 ip</code>. Set the
+<code>sin_family</code> field to <code>AF_INET</code>, the <code>sin_port</code>
+field to <code>htons(port_num)</code>, where <code>htons()</code> is a function
+that translates between the numeric representations used on your computer and in the network.
+Third, use the function <code>inet_aton()</code> to translate a c-style string
+containing the target IP address and store it at <code>sin_addr</code> using the
+second argument.
+</li><li>Finally, use <code>connect()</code> to make the connection. After 
+opening the connection, read the message from the socket and print it 
+to the standard output stream (stdout). Please note that this server 
+will refuse any data you send to it.
+</li></ol>
+
+<p>As the answer to this question, copy and paste the output from your terminal.
+If you cannot connect for whatever reason, give a descriptive error message using
+<code>strerror()</code> and <code>errno</code>.</p>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p></p><h3>Things to Turn In:</h3><p></p>
+<ul>
+<li>The answers to the above exercises
+</li><li>Your server code
+</li><li>Your client code
+</li><li>Your code you used to connect to the remote server
+</li></ul>
+
+<!--
+<p><li>Second </p>
+<p><li>Second </p>
+</ol>
+
+<p><h3>Optional Enrichment Exercises</h3></p>
+<ol>
+<p><li>Optional One</p>
+
+</ol>
+-->
+<hr style="width: 100%; height: 2px;"><p>
+</p></li></ol></body></html>

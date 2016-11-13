@@ -1,0 +1,228 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0073)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/15_sharedmem.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 15<br></h2>
+<h2 style="text-align: center;">Inter-process Shared Memory</h2>
+
+
+<!--
+<hr style="width: 100%; height: 2px;">
+<p><i>
+Quote
+</i></p>
+<p style="text-indent:10%">&mdash;Character, <i>Book</i>, Chapter N<p>
+-->
+
+<p>Shared memory is a low-level, fast, and powerful method for sharing data
+between concurrently executing processes. This technique allows two separate
+processes to read and write the same physical memory, providing an inter-process
+programming paradigm that is very close to that of multi-threaded or parallel 
+programming. </p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Create fixed-size shared memory regions across processes
+  </li><li>Implement a basic but robust concurrency protocol to manage concurrent
+reads and writes
+  </li><li>Clean up the shared memory regions safely
+  </li><li>Benchmark shared memory speed
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Shared Memory
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>Once constructed, the basic interface to a shared memory region is 
+just a <code>void</code> pointer. Rather than working at this low level (and
+in order to avoid the temptation for unsafe programming) we will start by
+defining a structure that we will use to impose order. Our basic shared data
+structure will be a constant-size array.<p></p>
+
+<ol>
+<li>Create a header file
+</li><li>Define a <code>char*</code> string that will serve as the name for your
+shared memory region.
+</li><li>Define (<code>#define</code>) a symbolic value that holds the size of your shared array: for testing, a size of around 10 should be sufficient.
+</li><li>Declare a structure that will organize your shared data. In this case,
+declare four fields:
+<ul>
+<li><code>volatile int write_guard</code>
+</li><li><code>volatile int read_guard</code>
+</li><li><code>volatile int delete_guard</code>
+</li><li><code>volatile int data[shared_mem_size]</code>
+</li></ul>
+</li></ol>
+
+<p></p></li><li>Our concurrency approach in these exercises will implement a classic
+leader/follower solution. We will assume that one process, called the leader,
+is the one that is always executed first and creates the shared memory 
+region. Otherwise, we would have to account for a concurrency race for which 
+process creates and sets up the region.<p></p>
+
+<p>Create a new file called <code>leader.c</code>. This file should create the
+shared memory region with the following steps. General documentation for
+Linux shared memory regions is found in <code>man 7 shm_overview</code>.
+
+</p><ol>
+<li>Create a shared memory file descriptor with <code>shm_open()</code>. You
+should use the flags <code>O_RDWR | O_CREAT</code>, which specify that this
+shared memory is both readable and writable and that this call should create 
+the region if it does not already exist. 
+<!--
+For added protection, you may want to include
+<code>O_EXCL</code>, which will generate an error if a region with the given
+name already exists.
+--> 
+It is sufficient to use <code>S_IRWXU</code> for the
+third parameter (which defines user permissions to the shared region).
+</li><li>The previous step creates the shared memory region, but it is created with
+a capacity of zero bytes. Use the function <code>ftruncate()</code> to resize
+the memory region. Since we are organizing our shared memory via the struct
+declared in your header file, set the size to be the <code>sizeof</code> this
+struct.
+</li><li>Now we need a way to read and write to the newly created region. Use
+the <code>mmap()</code> function to map the shared memory into your program's
+address space. The <code>addr</code> and <code>offset</code> fields should be
+<code>NULL</code> and <code>0</code>, respectively. The permissions parameter
+should specify both <code>PROT_READ</code> and <code>PROT_WRITE</code>, and the
+flags parameter should specify that this is a shared mapping with
+<code>MAP_SHARED</code>.
+</li><li>Finally, we want to treat our shared memory region as though it were a
+struct of the type declared in our header file. Create a struct pointer and
+use it to cast the return value of <code>mmap()</code>. Now, you can read
+and write your shared structure via this pointer.
+</li></ol> 
+
+<p>Define an array the same size as the <code>data[]</code> array in your
+shared struct. In your program, use the <code>srand()</code> and
+<code>rand()</code> functions to populate this
+local array. Then, copy this array into the shared struct- either with the
+<code>memcpy()</code> function, or though element-wise assignment. Have your
+program print out the local array.</p>
+
+<p></p></li><li>Make a copy of your leader program named <code>follower.c</code>. This
+program will gain access to the shared memory region in nearly the same way,
+but with two modifications. First, the call to <code>shm_open()</code> should
+not specify <code>O_CREAT</code>. Second, the call to <code>ftruncate()</code>
+is unnecessary and should be removed (as long as you don't change the size of the region it doesn't hurt anything, but it potentially could be a source of inconsistency if its value were changed). <p></p>
+
+<p>Modify <code>follower.c</code> so that it prints the contents of the shared
+data field. Build both programs, and then execute the leader and follower
+programs, in that order. Verify that the program output is identical. Copy
+and paste the output of both programs as the answer to this exercise.</p>
+
+<p></p></li><li>Right now
+our processes are effectively acting like they are reading and writing a shared
+file, but we would like them to interact more dynamically. In particular, we want each of our processes to react to events that occur in the other. The desired
+execution is as follows:
+
+<ol>
+<li>The leader creates the shared memory region and waits for the follower to be
+created.
+</li><li>The follower is created, notifies the leader to start writing, and waits for the data to be
+written to the shared struct.
+</li><li>The leader writes the data to the struct, notifies the follower to start
+reading, and waits for the follower to finish reading.
+</li><li>The follower prints the data to the console, notifies the leader that it is finished,
+and unlinks itself.
+</li><li>The leader destroys the shared memory region. 
+</li></ol>
+
+<p>
+The purpose of the other non-data fields in our shared struct is to
+facilitate the waiting and notification of these events between processes. 
+For example, in the sequence above the leader must wait for the follower to
+be created before it starts writing data into the shared region. The leader
+can wait on the value of the <code>write_guard</code> variable by spinning,
+
+</p><p>
+<code>while( shared_ptr-&gt;write_guard == 0 ){}</code>
+
+</p><p>
+and the follower can notify the leader it is safe to proceed by modifying
+the value,
+
+</p><p>
+<code>shared_ptr-&gt;write_guard = 1;</code>
+
+</p><p>Modify your program to reflect the sequence of events given above,
+using the <code>write_guard</code>, <code>read_guard</code>, and
+<code>delete_guard</code> variables. Also, once it is safe to do so, the leader
+should remove the shared region with the function <code>shm_unlink()</code></p>
+
+<p>
+Note that
+the shared memory region we created lives outside of either process
+and persists when neither program is running (existing shared memory
+regions can be found under the directory <code>/dev/shm/</code>). 
+The above synchronization code relies on the fact that variables are intialized
+to zero, which may not be true if your shared memory region is not properly
+destroyed after being used. If you have inexplicable program bugs, you can
+verify that this is not the issue by manually checking and deleting your shared
+memory region in the above directory.
+</p>
+
+<p></p></li><li>Once you are convinced that your concurrency protocol is working,
+modify the follower so that, rather than printing the contents of the shared
+structure to the console, you simply copy the shared data into a local
+array. With the protocol described above, the follower process lives just
+long enough for the leader to write data into the shared array and for the
+follower to copy data out of the shared array. That is, the lifetime of the
+follower process is approximately one complete transfer of data through
+shared memory. <p></p>
+
+<p>Use the <code>time</code> command with the follower program to
+obtain a rough estimate of the <i>bandwidth</i> through shared memory,
+in bytes per second. Take measurements where the shared array size is
+one million integers, ten million integers, and one-hundred million integers.</p>
+
+<p>As the answer to this problem, report your recorded values.</p>
+
+</li></ol>
+
+<p></p><h3>Things to Turn In:</h3><p></p>
+
+<ul>
+<li>The exercises above
+</li><li><code>leader.c</code>
+</li><li><code>follower.c</code>
+</li><li>Your shared header file
+</li></ul>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p></p><h2>Optional Enrichment Exercises</h2><p></p>
+<ol>
+<p></p><li>Shared memory has a reputation for being fast, but that's not necessarily
+always the case. For example, when typical reads and writes are much smaller
+than the size of a page (4 kilobytes), or when memory is heavily loaded,
+this method is known to not perform as well as some others (such as pipes) due
+to paging overhead. Try benchmarking pipes and sockets versus shared memory
+for a specific access pattern and see which method is actually fastest, under different conditions!<p></p>
+
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p></body></html>

@@ -1,0 +1,268 @@
+
+<!-- saved from url=(0080)http://www.cse.wustl.edu/~cdgill/courses/cse522/labs/02_scheduler_profiling.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Lab 2<br></h2>
+<h2 style="text-align: center;">Linux Scheduler Profiling</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<p><i>
+"There are two main reasons to use concurrency in an application: separation of concerns and 
+performance.  In fact I'd go so far as to say that they're pretty much the <em>only</em> 
+reasons to use concurrency;"
+</i></p>
+<p style="text-indent:10%">—Anthony Williams, <i>C++ Concurrency in Action</i>, 
+Chapter 1.2</p><p>
+
+</p><p>As we have discussed previously, the Linux Kernel provides
+  a variety of schedulers, each of which is better (or worse) suited for different
+  types of tasks. A good understanding of the semantics of the different
+  schedulers, and which of them is better suited for different scenarios, can make
+  a significant difference in the performance of a system.
+</p>
+
+<p>In this lab, you will:</p>
+
+<ol>
+  <li>Profile the SCHED_FIFO, SCHED_RR, and SCHED_NORMAL Linux schedulers.
+  </li><li>Use basic multi-threaded synchronization and concurrency techniques.
+  </li><li>Characterize/verify threading behavior under different schedulers, using tracing.
+</li></ol>
+
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the exercises described below. As you work through them, please take notes 
+regarding both your observations and your answers to the different questions given below, 
+and when you are finished please write-up a cohesive report (see next) and e-mail it along
+with your code files, Makefile, etc. to 
+<strong>eng-cse522@email.wustl.edu</strong> with the phrase <strong> Scheduler Profiling
+</strong> in the subject line.</p>
+
+  <p><strong>What you will turn in for this lab will differ somewhat from previous lab 
+    and studio exercises.</strong>
+    You will submit a cohesive report that unifies your observations and thoughts -- doing
+    so will be a helpful stage between the format of the studios and first lab, and the
+    final project report you will present and submit at the end of the semester.</p><p>
+
+    Instead of answering this lab's questions independently of each other, as you go make 
+    note of your observations and answers to each question. As you move from one question 
+    to the next, consider new answers in light of the previous answers and feel free to
+    go back to earlier questions and note connections with other questions. This will 
+    help you to synthesize a cohesive report when you are finished.</p><p>
+
+    <strong>This lab also is meant to focus less on how things are implemented
+      and more on what you learn and notice about the different scheduling classes.</strong>
+    For more information see "What to turn in" below.</p><p>
+
+    <strong>Note: this lab can be done in the language of your choosing.</strong>
+    The lab's purpose is to demonstrate knowledge of the Linux scheduler
+    and the ability to think critically, not to demonstrate mastery of any
+    particular programming language. That said, everything in this
+    lab is fairly straight-forward to do in C, and even more so if you use the C++11
+    threading libraries.  You are free to adopt algorithms, code fragments, etc. from
+    other sources (such as Williams' book quoted above), but if you do so you 
+    <strong>must</strong> comment those portions of your code and also discuss and cite
+    what you've used (and the source from which it came) in your submitted report.</p><p>
+
+    In this lab you will create a program that will spawn a certain number of threads to
+    be pinned on each core. These threads will then wait at a <strong>barrier</strong> until
+    all other threads have been successfully spawned and pinned. Once all threads have
+    arrived at the barrier, they will each (safely) select the next number from a data 
+    structure and cube that number repeatedly (for a given number of 
+    <strong>iterations</strong>).
+    This activity of selecting a number and repeatedly cubing it (which is intended to define
+    a basic unit of workload for the thread to perform) is then repeated for a given number
+    of <strong>rounds</strong> in each thread, giving it a sustained and configurable 
+    overall workload and some degree of contention among the threads, through which the 
+    performance of each scheduler can be evaluated.</p><p>
+     
+    The program will take in four or more arguments indicating (1) the <strong>scheduling
+    class</strong> to be used (SCHED_FIFO, SCHED_RR, or SCHED_NORMAL), (2) a positive
+    number of <strong>rounds</strong> for each thread to perform overall, (3) a positive
+    number of <strong>iterations</strong> of cubing the selected number that each thread
+    will perform in each round, and (4+) one or more additional numbers that should be used
+    to populate the data structure from which the threads will repeatedly obtain numbers.
+    For example, a command line such as</p><p>
+
+    <code>./myprog SCHED_RR 100 1000 2 3 5 7 11 </code></p><p>
+
+    would use the round-robin real-time scheduler and each thread would perform one hundred
+    rounds of: obtaining one of the prime numbers in the range 2 through 11 inclusive and
+    simply repeatedly computing the cube of that same number (not re-cubing the result of
+    the previous iteration which could easily introduce overflow and other representation 
+    issues we won't go into) 1000 times.
+  </p><p>
+</p><hr style="width: 100%; height: 2px;"><p>
+
+</p><ol>
+  <p><strong>NOTE: Some of these exercises/questions will likely freeze your Pi.
+      Save your work often, and read ahead to make sure you are aware where we
+      expect such freezes may occur.</strong></p>
+  
+<p></p><li>Begin by creating a program in the language of your choice that reads in
+    arguments from the command line in the following format:<br><br>
+    <code><strong> &lt;program_name&gt; &lt;scheduler&gt; &lt;rounds&gt;
+      &lt;iterations&gt; &lt;number&gt;+</strong></code><p>
+
+    The <strong>scheduler</strong> argument should indicate either the SCHED_RR,
+    SCHED_FIFO, or SCHED_NORMAL scheduler (note that SCHED_NORMAL is sometimes 
+    called SCHED_OTHER).</p><p>
+
+    The <strong>rounds</strong> argument gives the number of times each thread 
+    should select a new number from the data structure.</p><p>
+
+    The <strong>iterations</strong> argument gives the number of the times within
+    each round that the selected number should be cubed by the thread.</p><p>
+
+    One or more arguments should be given after that, indicating  <strong>number</strong> 
+    values that should be read into the data structure (from which the threads will then
+    select specific numbers to cube).</p>
+
+<p></p></li><li>Read in the provided <strong>number(s)</strong> into a data structure, and
+    spawn 2 threads per core. Pin these threads onto specific cores so that each core
+    has exactly 2 threads pinned to it, and set each thread
+    to use the scheduler given in the <strong>scheduler</strong> argument.<p></p>
+
+<p></p></li><li>Write a worker function for your spawned threads that reads in a number
+    from your data structure, cubes that number <strong>iterations</strong>
+    times and then selects another number. This entire activity should be done
+    <strong>rounds</strong> total times by each thread.<p>
+
+    The data structure holding the numbers will be accessed by multiple threads
+    at once, and should maintain (safely) a variable (an index, counter, pointer, 
+    etc.) for which number the next thread should read.  Each time a number is
+    read by a thread, that variable should advance to the next number in the data
+    structure (and after the last number is read should go back to the first number). 
+    You must allow concurrent access to this structure but avoid data races 
+    (particularly for that variable). Atomic variables and/or different kinds of locks 
+    are possibilities for this.</p><p>
+
+    Furthermore, it would defeat the purpose of the lab to allow certain threads
+    to begin their important work of cubing integers while other threads were
+    still being spawned and pinned. Therefore, create a way for threads to spin
+    wait until all threads are ready to being their task. This is known as a
+    <strong>thread barrier</strong> (this can be accomplished similarly using
+    atomic variables and/or mutexes -- Anthony Williams has a nice C++
+    implementation on page 269 of his book <strong>C++ Concurrency in Action</strong>,
+    though his barrier yields the processor, and yours needs to spin).
+    Have your threads wait on the barrier once more after they have finished their work.
+</p>
+
+<p></p></li><li>Run your program with SCHED_NORMAL (the default Linux scheduler) and
+    use trace-cmd to verify that your threads correctly wait at the barrier.
+    <strong>Question 1: How can you tell that your barrier worked?</strong>
+<p></p>
+
+<p></p></li><li>
+    As you've learned from previous studios, SCHED_NORMAL uses (among other things)
+    <strong>nice values</strong> to determine which threads run at
+    any given point. If SCHED_NORMAL is the chosen scheduler,
+    set a different nice value for each thread on a particular core.
+    You can give the same "nice" and "mean" values to every pair of threads, or you
+    can vary them from core to core. Play around with giving different nice levels
+    on threads and cores and observe how those affect (1) the overall amount of time the 
+    program takes to run, and (2) the amount of time each thread spends on the CPU before
+    the scheduler switches to the other thread. How you obtain the timing
+    information is up to you. Be creative. Possibilities include creating a kernel 
+    module that that monitors which tasks are on the CPU and/or writing a script that 
+    would extract that information from a trace-cmd .dat file. Note and explain your 
+    observations. Please use appropriately large numbers of <strong>rounds</strong> and
+    <strong>iterations</strong>, so that the scheduling behavior is clear (setting both 
+    to 1000 should suffice).
+<p></p>
+
+<p></p></li><li>Unlike SCHED_NORMAL, SCHED_RR and SCHED_FIFO do not use nice values. Instead they
+    use fixed real-time <strong>priorities</strong> when making scheduling decisions. 
+    When one of these schedulers is chosen, give different real-time priorities to each 
+    thread on a core (again, feel free to re-use the same two values from core to core),
+    creating a high-priority thread and a low-priority thread per core.
+    Run your program a couple of different times with different priority values.
+    <strong>Question 2: What happens?</strong>
+<p></p>
+
+<p></p></li><li>Don't be dismayed if the last exercise froze your Pi (it probably should have
+    but that may depend on your approach to the last exercise).
+    <strong>Question 3: Why would we have expected this?</strong> To help you 
+    figure out what went wrong (if it did), and when your Pi froze (if it did), 
+    you may want to consider placing print statements (followed by a flush
+    statement to force the message from memory onto the output terminal) in your code.
+<p></p>
+    
+<p></p></li><li>In order to fix the above situation (if it occurred), you may want to consider 
+    doing one of the following:
+    1) Determining it is impossible to program with multiple RT priority
+    threads running on the same processor at once.
+    2) Using separate barriers for high and low priority tasks.
+    3) Increasing the number of threads per CPU to 4
+    4) Decreasing the RT priority of the threads.
+
+    <strong>Question 4: Which of the above solved your problem and why did it?</strong> 
+    Evaluate your hypothesis by implementing the necessary change and running your 
+    program with both SCHED_RR and SCHED_FIFO, examining how their traces differ,
+    and considering why they might.
+<p></p>
+    
+<p></p></li><li>
+    Now change the number of threads that are spawned to 4 threads per core and repeat
+    all of the previous exercises.  For SCHED_NORMAL, give two tasks the same "nice" 
+    nice level and two tasks the same "not-so-nice" nice level.
+    For SCHED_FIFO and SCHED_RR, make two tasks high priority and two
+    tasks low priority.
+    As before, make note of the timing both of the program overall and of
+    individual threads.
+    Run your program with each of the schedulers and note
+    what happens. If there are any peculiarities, note them and hypothesize
+    about what their cause may be and how to fix them, and implement those fixes if
+    you so desire.
+<p></p>
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+<strong>What to turn in:</strong>
+(1) all the code and compilation files used to implement and run your solution 
+    (including a Makefile if you used one, etc.);
+(2) a readme.txt file with the contents described next, and
+(3) other files (e.g., with screen-shots from Kernelshark) that enhance your report.
+</p><p>
+
+The first section of your readme.txt file should include:
+</p><ol>
+  <li>The name and number of the lab.
+  </li><li>The name and email address of everyone who worked together on this lab.
+  </li><li>Attribution of sources for any materials that were used in (or strongly influenced)
+      your solution, e.g., Williams' thread barrier described above if your approach was
+      based on his approach.
+  </li><li>Design decisions you made in creating your lab and their rationale, including
+      your rationale for using the programming language you chose and for how you
+      structured your code.
+  </li><li>Detailed answers to the highlighted questions asked above (questions 1 through 4), 
+    not necessarily in the order in which the questions were asked, but rather as a 
+    thoughtful synthesis of all questions asked above and the thoughts or observations 
+    you may have had along the way.
+  </li><li>Precisely which values you used for <strong>iterations</strong> and
+    <strong>rounds</strong> at different point in the assignment and how
+    they may have affected your runs.
+  </li><li>Names of the files with interesting screen-shots you may have from Kernelshark along with
+    what code you ran to generate them and discussion of why you find their
+    results interesting.
+  </li><li>Any insights or questions you may have had while completing this assignment.
+  </li><li>Any suggestions you have for how to improve the assignment itself.
+  </li><li>The amount of time you spent on this assignment.
+</li></ol>
+
+The second section of your readme.txt should include detailed
+instructions for how to:
+<ol>
+  <li>unzip or otherwise unpack your files,
+  </li><li>build your programs (including on which machines to do that), and
+  </li><li>run your programs on the Raspberry Pi 3 (including a list of all 
+      the different command lines used to generate your results).
+</li></ol>
+  
+<p></p>
+</body></html>

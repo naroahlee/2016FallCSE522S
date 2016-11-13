@@ -1,0 +1,12 @@
+--- unistd.h	2016-09-01 14:02:14.926891780 -0500
++++ unistd.h.bak	2016-09-01 13:59:31.608054735 -0500
+@@ -417,9 +417,6 @@
+ #define __NR_userfaultfd		(__NR_SYSCALL_BASE+388)
+ #define __NR_membarrier			(__NR_SYSCALL_BASE+389)
+ #define __NR_mlock2			(__NR_SYSCALL_BASE+390)
+-/* Naroah 160901 */
+-#define __NR_badcall			(__NR_SYSCALL_BASE+391)
+-#define __NR_naroahkmsg			(__NR_SYSCALL_BASE+392)
+ 
+ /*
+  * The following SWIs are ARM private.

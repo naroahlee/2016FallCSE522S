@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0071)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/12_signals.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 12<br></h2>
+<h2 style="text-align: center;">Linux Signal Handling</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<!--
+<p><i>
+Quote
+</i></p>
+<p style="text-indent:10%">&mdash;Character, <i>Book</i>, Chapter N<p>
+-->
+
+<p>Signals are a simple yet powerful way for Linux processes to communicate
+in pre-defined ways. They are ideally suited for inter-process event handling 
+during system operation. Signals can be sent to any process in the system, and
+can be recieved by defining special functions called <i>signal handlers</i>,
+which are executed upon receipt of the signal.
+</p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Generate and recieve program signals
+  </li><li>Create custom signal handlers
+  <!-- <li>See how signals are used to implement exceptions -->
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Linux Signals
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>For the first exercise we will find an existing program to handle
+signals with a custom signal handler. Find a clean copy of the 
+<code>dense_mm</code> program that we used earlier. Build this program and
+run it.
+While this program is executing, send it the keyboard interrupt signal
+(<code>SIGINT</code>) by highlighting its terminal and pressing CTRL+C
+(hold down the CTRL button and press C). As the answer to this exercise,
+copy and paste the result from successfully interrupting your program.<p></p>
+
+
+
+<p></p></li><li>There are many signals that can be sent or recieved in Linux. An overview
+of the signalling mechanism can be found at the manual page
+<code>man 7 signal</code>. Some commonly used signals are <code>SIGINT</code>
+(keyboard interrupt), <code>SIGQUIT</code> (quit from keyboard), and
+<code>SIGTERM</code> (terminate process). Every signal in the system is
+associated with a default action (which typically terminates the recieving
+process), but this can be overridden simply by defining
+your own signal handling function, which is what we will now do.<p></p>
+
+<p>The modern, portable way to define a signal handler is to use the function
+<code>sigaction()</code> which is documented at <code>man sigaction</code>. Use
+this function to define a new handler for <code>SIGINT</code>. You will need to:</p>
+
+<ul>
+<li>Create a handler function with the signature: <code>void function_name (int arg)</code>
+</li><li>Create a <code>struct sigaction</code> in your <code>main()</code> function
+</li><li>Assign the <code>sa_handler</code> field of your <code>struct sigaction</code> to your signal handling function
+</li><li>Assign the <code>sa_flags</code> field of your <code>struct sigaction</code> to <code>SA_RESTART</code>
+</li><li>Call the <code>sigaction()</code> function with <code>SIGINT</code> as the signum argument and a pointer to your <code>struct sigaction</code> for the act argument.
+</li></ul>
+
+<p>Declare a global counter and increment it when the handler function is
+called. At the end of your <code>main()</code> function print the value of
+this counter. Copy and paste a sample program output as the answer to this
+exercise.</p>
+
+<p><b>NOTE:</b> Overriding the <code>SIGINT</code> handler may make it
+difficult to terminate your program. You can alternately use CTRL+\ to send
+the <code>SIGQUIT</code> signal or the <code>kill</code> program to terminate
+your processes.</p>
+
+<p></p></li><li>One way that signal handlers are special functions is that they execute
+asynchronously with respect to the rest of a program. When called, they may
+interrupt the normal execution of the program at virtually any point. Consider
+what might happen, for example, if the same function is called from both the
+regular program flow as well as a signal handler. This could result in the
+function being called concurrently from two different contexts, even within
+a single-threaded program! This could cause data corruption or even deadlock
+if not handled appropriately.<p></p>
+
+<p>Even library functions are not immune to problems with asynchronicity.
+Download the program <a href="http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/print5000.c"><code>print5000.c</code></a>, build
+and run it. This is a very simple program that defines a signal handler for
+<code>SIGINT</code>, and then prints the numbers from 1 to 5000 in order.
+Try running this program and interrupting it with <code>SIGINT</code>. Inspect
+the program output where it was possibly interrupted by a signal handler.</p>
+
+<p>What happens? Copy and paste evidence.</p>
+
+<p></p></li><li>For the reasons outlined above, it is not safe to make many common
+system calls or library function calls from within a signal handler. Many such
+functions, such as <code>printf()</code> are not guaranteed to execute
+correctly when called from within a handler, since they may be called
+concurrently from different contexts.
+Fortunately, there is a list of functions that is guaranteed to be safe
+when called from a handler. These functions are given in the signal documentation
+at <code>man 7 signal</code> under "Async-signal-safe functions".<p></p>
+
+<p>Going back to your original program, use the <code>write()</code> function
+documented at <code>man 2 write</code> to produce output from within a signal
+handler. In particular, you must:</p>
+
+<ul>
+<li>Declare an array of characters (e.g. <code>char* message = "error message\n"</code>)
+</li><li>Count the number of characters you want to print
+</li><li>Use the <code>write()</code> function with argument fd equal to zero to write to standard output (e.g. <code>write(0, message, num_chars);</code>)
+</li></ul>
+
+</li></ol>
+
+<hr>
+
+<p></p><h3>Things to turn in:</h3><p></p>
+<ul>
+<li>Your signal handling program
+</li><li>The answers to exercises above
+</li></ul>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p></body></html>

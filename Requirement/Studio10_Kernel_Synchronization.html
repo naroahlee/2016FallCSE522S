@@ -1,0 +1,132 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0076)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/10_kernel_synch.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 10<br></h2>
+<h2 style="text-align: center;">Kernel Synchronization</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<p><i>
+"Well, after them!" said Gimli. "Dwarves too can go swiftly, and they do not tire sooner than Orcs. But it will be a long chase: they have a long start."</i></p><i>
+
+</i><p><i>"Yes," said Aragorn, "we shall all need the endurance of Dwarves. But come! With hope or without hope we will follow the trail of our enemies. And woe to them, if we prove the swifter! We will make such a chase as shall be accounted a marvel among the Three Kindreds; Elves, Dwarves, and Men. Forth the Three Hunters!"
+</i></p>
+<p style="text-indent:10%">—<i>The Two Towers</i>, Chapter 1, Book III</p><p>
+
+</p><p>Like many userspace programs, the Linux kernel is designed to run
+concurrently with itself. In this case, kernel code must be careful
+not to create race conditions and concurrency bugs by accessing shared
+data without protection.</p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Create a race condition in a kernel module
+  </li><li>Use kernel synchronization to resolve the race condition
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Kernel Synchronization
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>Create a kernel module that creates a team of threads, one on each processor,
+that call a thread function and return. (I.e. your threads should not do the
+periodic or repeating behavior from lab 1.) You can use your solution to Lab1
+ras a template for this.<p></p>
+
+<p></p></li><li>Now we will create a race condition in the kernel, so that we can later
+solve it. Declare a global <code>int</code> called <code>race</code> with the
+<code>volatile</code> qualifier, as so:<p></p>
+
+<p><code>volatile int race = 0;</code></p>
+
+<p>The <code>volatile</code> qualifier tells the compiler that this variable
+will be modified outside of the current execution context, and has the effect
+of disabling certain optimizations.</p>
+
+<p>Within the thread function for each of your threads, write a for loop that
+increments the variable <code>race</code> one million (1,000,000) times, as
+so:</p>
+
+<p><code>#define iters 1000000</code></p>
+<p><code>for( i=0; i&lt;iters; i++){</code></p>
+<p><code>   race++;</code></p>
+<p><code>}</code></p>
+
+<p>In your module's exit function, print out the value of <code>race</code>.
+Leave the answer to this exercise blank.</p>
+
+<p></p></li><li>Execute your code three times, what is the value of race? If you 
+get 4,000,000 consistently then you have not successfully created a race condition.
+Make sure your variable is declared as <code>volatile</code> and that your
+threads are executing simultaneously.<p></p>
+
+<p></p></li><li>Make a new copy of your kernel module and
+replace your global integer with a global <code>atomic_t</code> type,
+which is defined in <code>include/linux/types.h</code>. This is an opaque type that
+is only accessed through special mutators and accessors. Initialize this new
+type with the function <code>atomic_set()</code>, increment it with the function
+<code>atomic_add()</code>, and access it's value with the function <code>
+atomic_read()</code>. The function prototypes are found in
+<code>include/asm-generic/atomic.h</code><p></p>
+
+<p></p></li><li>Run your code three times. What is the new value of race? If you get
+anything other than 4,000,000 you have not successfully resolved your race
+condition.<p></p>
+
+<p></p></li><li>Have your threads print a statement to the system log before they start
+their <code>for</code> loop and when they finish. Use this as a crude timestamp
+to determine how long it takes your code to execute. How long does it take?<p></p>
+
+<p></p></li><li>Make another copy of your original kernel module. This time, rather
+than modifying your global integer to be atomic, we will use a mutex to 
+protect it. Use the macro <code>DEFINE_MUTEX(mutex_name)</code> to statically 
+declare a mutex at the global scope and use the functions 
+<code>mutex_lock(&amp;mutex_name)</code>
+and <code>mutex_unlock(&amp;mutex_name)</code> to protect access to the
+<code>race</code> variable.<p></p>
+
+<p></p></li><li>Again, use kernel print statements as a crude timestamp for your thread
+functions. How long does it take your mutex code to complete?<p></p>
+
+<p></p></li><li>Given the time difference between using atomic variables versus mutexes,
+why are mutexes useful? Give an example where you might prefer a mutex over
+an atomic variable.<p></p>
+
+</li></ol>
+
+<h3>Things to turn in</h3>
+
+<ul>
+<li>The exercises above
+</li><li>Your racy kernel module
+</li><li>Your atomic_t kernel module
+</li><li>Your mutex kernel module
+</li></ul>
+
+
+<hr style="width: 100%; height: 2px;"><p>
+</p></body></html>

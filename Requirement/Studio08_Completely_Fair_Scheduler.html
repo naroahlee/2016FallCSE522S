@@ -1,0 +1,151 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0077)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/08_cfs_scheduler.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 8<br></h2>
+<h2 style="text-align: center;">Completely Fair Scheduler (CFS)</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<p><i>
+Hobbits give presents to other people on their own birthdays. Not very expensive ones, as a rule, but it was not a bad system. Actually in Hobbiton and Bywater every day in the year it was somebody's birthday, so that every hobbit in those parts had a fair chance of at least one present at least once a week.
+</i></p>
+<p style="text-indent:10%">—<i>The Fellowship of the Ring</i>, Book 1, Chapter 1</p><p>
+
+</p><p>Linux's CFS strives to be <i>completely fair</i>, meaning that all processes
+should recieve an equal share of the processor time. 
+In particular, if there are
+a total of <i>N</i> processes in the system, then all processes will ideally recieve
+exactly <i>1/N</i>th of the processor time. In this studio we will explore the
+CFS from user space. 
+</p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Create workloads to influence the scheduler
+  </li><li>Analyze the scheduler from userspace
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+CFS Studio
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>Before we begin we need to disable a certain scheduling heuristic that
+influences the exercises in this studio. Change the value of the file
+<code>/proc/sys/kernel/sched_autogroup_enabled</code> from 1 to 0. You can
+do this with the command <code>echo 0 &gt; sched_autogroup_enabled</code>, but
+you will probably have to have a root terminal (<code>sudo bash</code>) in
+order to modify the value. If we did not do this, then the way that you
+invoked the exercises in this studio would influence your results.<p></p>
+
+<p></p></li><li>Now we will create a CPU-bound workload. The simplest CPU-bound
+program is a <code>while(1)</code> loop, but we want a little control over
+where this task executes. To do this, we will use Linux's <i>processor
+affinities</i>.<p></p>
+
+<p>For this exercise, write a infinite-loop program that takes one integer argument
+which gives the processor that the program should execute upon. In order to
+control where your process is allowed to run you can use the function
+<code>sched_setaffinity()</code>. To use this function you will need to specify
+the set of allowable CPUs with a variable of type <code>cpu_set_t</code>. In
+order to manipulate this data type you should use the functions documented in
+<code>man CPU_SET</code>. This is a nonstandard extension, so you will need to
+place <code>#define _GNU_SOURCE</code> before you include <code>sched.h</code>.
+</p>
+
+<p>Verify that your program runs continuously on a processor of your choosing
+with the <code>top</code> or <code>trace-cmd</code> commands.</p>
+
+<p></p></li><li>Your Raspberry Pi has four processors, and the Linux convention is to
+number them starting with zero. Create an infinite loop task on each of 
+processors 0, 1, 2, and 3 to fully occupy your system. We will call these
+tasks the <i>background workload</i>.<p></p>
+
+<p>Take a moment and marvel at the fact that your system hasn't come crashing
+to a halt. Do a few tasks of your own choosing (text editing, internet
+browsing, etc.) and make a subjective judgement of how well the system responds
+now versus before you started the infinite loop tasks.</p>
+
+<p>As the answer to this question, describe your experience.</p>
+
+<p></p></li><li>Now we'll use the <code>dense_mm</code> program from previous studios
+to examine the behavior of CPU-bound tasks on a heavily loaded system. First,
+kill your background workload and 
+use the command <code>time ./dense_mm 300</code> to get a rough measure of
+program execution time on a quiet system. Now, restart the background tasks
+and run the same command again.<p></p>
+
+<p>As the answer to this exercise, copy and paste each response.</p>
+
+<p></p></li><li>Compare the <code>real</code> and <code>user</code> timings.
+What does the previous exercise tell you about the way that two
+CPU-bound tasks share a processors under the CFS?<p></p>
+
+<p></p></li><li>What do you think will happen to the <code>real</code> and <code>
+user</code> time of <code>dense_mm 300</code> if you were to increase the
+number of background tasks?<p></p>
+
+<p></p></li><li>Create new background tasks so that each processor contains two infinte
+loop tasks. Execute the command <code>time ./dense_mm 300</code> and copy and
+paste the results here. What happened?<p></p>
+
+<p>Two helpful tips. You can detach a command from the terminal by executing it
+with an ampersand (&amp;) at the end. Also, you can kill all tasks matching a
+a certain string with the <code>pkill</code> command. For example, if I named
+my infinite loop task <code>while</code>, then I could create multiple tasks
+on processor zero with the command <code>./while 0 &amp;</code>. When I was
+done, I could kill all outstanding tasks with the command
+<code>pkill while</code>.</p>
+
+
+<p></p></li><li>Reset your system so that only one background task exists on each
+processor.
+The CFS scheduler doesn't have a direct notion of timeslice or priority,
+but Linux's <code>nice</code> priorities do influence the proportion of
+time a task recieves.
+Run the command <code>time sudo nice -n -20 ./dense_mm 300</code>. What
+proportion of time (<code>user</code> divided by <code>real</code>)
+did the task recieve?<p></p>
+
+<p></p></li><li>Repeat the previous exercise for nice priorities -10, -5, 0,
+5, 10, and 19. You probably don't
+want to wait for 19 to finish, so stop the task after a while with
+<code>CTRL-C</code>. Compute their runtime proportions.<p></p>
+
+<p></p></li><li>Plot the values from the last exercise on a graph. What does the
+function look like?<p></p>
+
+</li></ol>
+
+<h3>Things to turn in</h3>
+<ul>
+<li>Your infinite-loop program
+</li><li>The exercises above
+</li></ul>
+
+
+<hr style="width: 100%; height: 2px;"><p>
+</p></body></html>

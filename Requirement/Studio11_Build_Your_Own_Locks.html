@@ -1,0 +1,204 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0069)http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/11_locks.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>CSE 522S - Advanced Operating Systems</title></head>
+
+<body><h2 style="text-align: center;">CSE 522S: Studio 11<br></h2>
+<h2 style="text-align: center;">Build Your Own Locks</h2>
+
+
+
+<hr style="width: 100%; height: 2px;">
+<i>
+<p>Even as they spoke there came a blare of trumpets. Then there was a crash and a flash of flame and smoke. The waters of the Deeping-stream poured out hissing and foaming: they were choked no longer, a gaping hole was blasted in the wall. A host of dark shapes poured in.</p>
+</i>
+<p style="text-indent:10%">—<i>The Two Towers</i>, Chapter 7, Book III</p><p>
+
+</p><p>Locking primitives are important userspace tools for concurrent and parallel
+programming. Two main types of locks exist. <i>Spinlocks</i> consume processor
+time as a process waits, but are ideally suited for low-latency and
+low-overhead appliations when critical section lengths are very short. 
+Other locks allow processes to sleep while waiting, which can better utilize
+processor time but results the higher overhead of sleeping and waking up
+processes. </p>
+
+<p>In this studio, you will:</p>
+
+<ol>
+  <li>Build a userspace spin lock with atomic instructions
+  </li><li>Build a userspace sleep lock with atomic instructions and futexes
+</li></ol>
+
+<hr style="width: 100%; height: 2px;"><p>
+</p><p>
+Please complete the required exercises below, as well as any optional
+enrichment exercises that you wish to complete.</p> 
+
+<p>
+As you work through these exercises, please record your answers, and when
+finished email your results to <strong>eng-cse522@email.wustl.edu</strong> with
+the phrase <strong>
+Locks
+</strong> in the subject line.</p>
+
+<p><strong> Make sure that the name of each person who worked on these exercises
+is listed in the first answer, and make sure you number each of your responses
+so it is easy to match your responses with each exercise.</strong></p>
+<hr style="width: 100%; height: 2px;"><p>
+
+</p><p></p><h3>Required Exercises</h3><p></p>
+
+<ol>
+
+<p></p><li>As the answer to the first exercise, list the names of the people who
+worked together on this studio.<p></p>
+
+<p></p></li><li>Download <a href="http://www.cse.wustl.edu/~cdgill/courses/cse522/studios/workload.c">this program</a>. This is a short
+parallel workload that creates about five seconds of work on each processor
+in a system. Build the program (see commented code) 
+and verify that it occupies all of your system's
+cores by using the <code>top</code> program and pressing 1.<p></p>
+
+<p></p></li><li>Right now, all functions can execute the <code>critical_section()</code>
+function simultaneously. This is undesirable, since critical sections typically
+protect important shared data. First we will build a spin lock to protect access
+to the <code>critical_section()</code> function.<p></p>
+
+<p>Create an empty <code>lock</code> and
+<code>unlock</code> function. These functions should take a pointer to a
+volatile integer. Insert these functions into the code around the critical
+section.</p>
+
+<p><i>Note:</i> Recall that the <code>volatile</code> specifier tells the compiler
+that the value of a variable may change. In this case, the compiler interprets
+a <code>volatile int*</code> to mean that the value pointed at by the pointer
+may change unexpectedly, not that the pointer itself may change.</p>
+
+<p></p></li><li>In order to treat an integer like a lock, we need to define two values
+that represent the locked and unlocked states, respectively. Define these at
+the top of your program with a compiler pound-define. Create two integer
+variables that hold these values.<p></p>
+
+<p></p></li><li>In order to implement the <code>lock</code> and <code>unlock</code>
+functions we'll use GCC's built-in atomic instructions. If we were working in
+C++ we could use C++ 11's atomic instructions. If we didn't have access to GCC,
+or if speed was very critical, we could implement these with assembly
+instructions.<p></p>
+
+<p>
+<a href="https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html">
+The atomic built-in functions are documented here</a>.
+For the spin lock we will use the function <code>__atomic_compare_exchange()
+</code>. The first three arguments determine the semantic meaning of this
+function: <i>ptr</i>, <i>expected</i>, and <i>desired</i>. When called,
+this function atomically compares the contents of <i>ptr</i> and <i>expected</i>, and
+if they are equal, writes the value of <i>desired</i> into <i>ptr</i>. The last
+three arguments specify special memory orderings, but we'll just opt for a
+strong ordering for this studio. The last three parameters to
+invoke this function are as so:</p>
+
+<p><code>__atomic_compare_exchange( ptr, expected, desired, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)</code></p>
+
+
+
+<p>To implement the lock function, you should check for the unlocked state
+and write the value of the locked state. However, it's possible that this
+function will fail (for example, if another process already holds the lock).
+Thus, your lock function should attempt to swap the state of the lock variable,
+and continue retrying indefinitely until it succeeds. <b>WARNING:</b> The swap
+function will overwrite the value of <code>expected</code> when it fails!</p>
+
+<p>Implement the unlock function with the same command. However, we only expect
+the unlock function to be called when we already hold the lock. If the
+call to <code>__atomic_compare_exchange()</code> fails, then rather than
+retrying the function, you should print out an error message and return.</p>
+
+<p></p></li><li>Lastly, create volatile integer to serve as your lock and initialize
+it using your pound-define state value. 
+Run your program and use each thread's finishing statement to verify
+that only one thread enters the critical section at a time.<p></p>
+
+<p></p></li><li>Now we will implement a sleep lock. The lock above consumes processor
+time while it's waiting, because it continually retries the lock operation
+until it succeeds. To implement our sleep lock, we will replace this behavior
+with one where we try to acquire the lock, but if we fail, the thread sleeps
+until it is later woken up. To begin, make a copy of your program and delete
+the function bodies of <code>lock()</code> and <code>unlock()</code>, as well
+as your lock state pound-defines.<p></p>
+
+<p></p></li><li>The sleep and wakeup mechanism we will use is a system call called <i>futex</i>,
+which stands for a <i>fast userspace mutex</i>. The system call handles the
+mechanism of sleeping and waking processes, but a userspace-side component must
+decide how and when to use this capability. In particular, the futex is
+designed to implement a semaphore on top of an integer. There are three states:<p></p>
+
+<table border="3">
+	<tbody><tr><td>Unlocked:</td><td>1</td></tr>
+	<tr><td>Locked:</td><td>0</td></tr>
+	<tr><td>At least one process is sleeping:</td><td>any negative number</td></tr>
+</tbody></table>
+
+<p>Since the futex is designed to implement a semaphore, this means that
+processes lock and unlock the futex by atomic increments and decrements. When a
+process claims the futex, it atomically decrements the integer by one. When
+a process releases the futex, it atomically increments the integer by one. If
+two processes never conflict, then the value of the futex integer will always
+be zero or one, and no process will ever have to sleep (and thus, you will
+never need to make a futex system call).</p>
+
+<p>However, if multiple processes try to lock the futex simultaneously, they will
+decrement the integer value to be negative. In this case, a process that gets
+some value less than zero will want to put itself to sleep, and the kernel
+must become involved. The semantics and the particulars of this process
+are documented at the man pages <code>man 2 futex</code> and 
+<code>man 7 futex</code>.</p>
+
+<p></p></li><li>First, declare the locked and unlocked states in a pound-define
+at the top of your program.<p></p>
+
+<p></p></li><li>Implement your lock function with the following algorithm.<p></p>
+
+<ol>
+<li>Decrement the lock integer with <code>ret_val = __atomic_sub_fetch( lock_ptr, 1, __ATOMIC_ACQ_REL );</code>
+</li><li>Check to see if the return value is less than zero
+</li><li>If yes, we need to sleep. Set the lock integer to -1 with <code>__atomic_store_n( lock_ptr, -1, __ATOMIC_RELEASE );</code>
+</li><li>Then call the system call: <code>syscall( SYS_futex, lock_ptr, FUTEX_WAIT, -1, NULL );</code>
+</li><li>Then go back to step 1
+</li><li>If no, exit the <code>lock()</code> function
+</li></ol>
+
+<p></p></li><li>Implement your unlock function with the following algorithm.<p></p>
+
+<ol>
+<li>Increment the lock integer with <code>ret_val = __atomic_add_fetch( lock_ptr, 1, __ATOMIC_ACQ_REL );</code>
+</li><li>Check to see if the return value is one
+</li><li>If yes, exit the <code>unlock()</code> function
+</li><li>If no, we need to wake up some sleeping thread. Set the lock integer to 1 with __atomic_store_n( lock_ptr, 1, __ATOMIC_RELEASE );
+</li><li>Then call the system call: <code>syscall( SYS_futex, lock_ptr, FUTEX_WAKE, INT_MAX );</code>
+</li></ol>
+
+<p></p></li><li>Create a volatile integer to serve as your lock. Initialize it with your pound-define unlocked value. 
+Run your program and verify that only one thread is able to access the critical section at a time.<p></p>
+
+<p></p></li><li>Trace both versions of your program with <code>trace-cmd record -e 
+sched_switch</code>. Take a screen shot showing both behaviors.<p></p>
+
+<p></p></li><li>Notice that your spin lock is able to do synchronization entirely in
+userspace, while the futex lock requires the intervention of the kernel.
+Would it be possible to do a sleep lock entirely in userspace (i.e. with no
+system calls)?<p></p>
+
+</li></ol>
+
+<h3>Things to turn in</h3>
+<ul>
+<li>The exercises above
+</li><li>Your spin lock program
+</li><li>Your sleep lock program
+</li><li>Both screenshots from the last exercise
+</li></ul>
+
+
+<hr style="width: 100%; height: 2px;"><p>
+</p></body></html>
